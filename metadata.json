@@ -1,0 +1,7 @@
+{
+  "name": "CloudFit Pro Clone",
+  "description": "A professional fitness management application for pairing workouts with multiple displays, managing exercise libraries, and scheduling routines locally.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
