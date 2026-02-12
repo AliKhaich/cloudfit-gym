@@ -74,15 +74,12 @@ export const TVView: React.FC = () => {
   const currentModule = workout.modules[currentModuleIndex];
   
   // Find which exercise this TV is supposed to show right now
-  // First priority: Is this TV the 'Active' one for the current module?
   const isActiveTarget = currentModule.displayId === peerId;
   
   // Find the exercise assigned to this TV in the workout
-  // (In station mode, it might show its assigned station even if another station is 'active')
   const myAssignedModule = workout.modules.find(m => m.displayId === peerId);
   const exerciseBase = myAssignedModule ? MOCK_EXERCISES.find(ex => ex.id === myAssignedModule.exerciseId) : null;
   
-  // Determine if this TV should be "Working" or "Resting/Waiting"
   // If this TV isn't assigned to ANY module in the current workout, show a waiting screen
   if (!exerciseBase) {
     return (
@@ -93,12 +90,9 @@ export const TVView: React.FC = () => {
     );
   }
 
-  // Check if we have an AI override (locally stored on the TV if it's been generated)
+  // Check if we have an AI override
   const overrides = JSON.parse(localStorage.getItem('cf_exercise_overrides') || '{}');
   const exercise = overrides[exerciseBase.id] || exerciseBase;
-
-  // Visual logic: dim the display if this TV isn't the current focus of the phone
-  const shouldDim = !isActiveTarget;
 
   return (
     <div className="h-screen bg-black flex flex-col text-white animate-in fade-in duration-500 overflow-hidden">
@@ -109,23 +103,23 @@ export const TVView: React.FC = () => {
             autoPlay 
             loop 
             muted 
-            className={`w-full h-full object-cover transition-opacity duration-1000 ${shouldDim ? 'opacity-30' : 'opacity-100'}`}
+            className="w-full h-full object-cover transition-opacity duration-1000 opacity-100"
           />
         ) : (
-          <img src={exercise.thumbnail} className={`w-full h-full object-cover blur-xl transition-opacity duration-1000 ${shouldDim ? 'opacity-10' : 'opacity-40'}`} alt={exercise.name} />
+          <img src={exercise.thumbnail} className="w-full h-full object-cover blur-xl transition-opacity duration-1000 opacity-40" alt={exercise.name} />
         )}
         
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-12 flex flex-col justify-end items-center text-center">
-           <div className={`mb-8 transition-all duration-1000 ${shouldDim ? 'scale-75 opacity-50' : 'scale-100'}`}>
+           <div className="mb-8 transition-all duration-1000 scale-100">
               {!isActiveTarget && (
-                <span className="bg-[#E1523D] px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest mb-4 inline-block">Standby</span>
+                <span className="bg-[#E1523D]/50 border border-white/20 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 inline-block backdrop-blur-md">Next Station</span>
               )}
               <h2 className="text-8xl font-black uppercase italic tracking-tighter mb-2 leading-none">{exercise.name}</h2>
               <p className="text-3xl text-[#E1523D] font-black uppercase tracking-[0.3em]">{exercise.category}</p>
            </div>
            
            <div className="relative">
-              <div className={`text-[18rem] leading-none font-black italic tabular-nums transition-all duration-500 ${isPaused || shouldDim ? 'opacity-20' : 'text-white'}`}>
+              <div className={`text-[18rem] leading-none font-black italic tabular-nums transition-all duration-500 ${isPaused ? 'opacity-20' : 'text-white'}`}>
                 {timeLeft}
               </div>
               {isPaused && (
