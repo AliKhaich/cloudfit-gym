@@ -62,10 +62,35 @@ export const Home: React.FC<HomeProps> = ({ onSelectWorkout, onNavigate }) => {
       lastModified: Date.now(),
       name: `${template.name} (Copy)`
     };
-    const updatedWorkouts = [...workouts, cloned];
-    storage.setWorkouts(updatedWorkouts);
-    setWorkouts(updatedWorkouts);
+    
+    setWorkouts(prev => {
+      const updated = [...prev, cloned];
+      storage.setWorkouts(updated);
+      return updated;
+    });
+    
     onSelectWorkout(cloned);
+  };
+
+  const handleDeleteWorkout = (id: string) => {
+    if (window.confirm('Delete this workout permanently?')) {
+      // 1. Update workouts state immediately
+      setWorkouts(prev => {
+        const updated = prev.filter(w => w.id !== id);
+        storage.setWorkouts(updated); // Sync storage inside update for consistency
+        return updated;
+      });
+      
+      // 2. Clean up folder references
+      setFolders(prevFolders => {
+        const updatedFolders = prevFolders.map(f => ({
+          ...f,
+          workoutIds: f.workoutIds.filter(wid => wid !== id)
+        }));
+        storage.setFolders(updatedFolders);
+        return updatedFolders;
+      });
+    }
   };
 
   const handlePair = (code: string) => {
@@ -101,7 +126,6 @@ export const Home: React.FC<HomeProps> = ({ onSelectWorkout, onNavigate }) => {
   };
 
   const scheduledDaysList = Array.from(new Set(workouts.flatMap(w => w.scheduledDays)));
-  const filteredBySchedule = workouts.filter(w => w.scheduledDays.includes(selectedDay));
   const filteredByFolder = activeFolderId 
     ? workouts.filter(w => folders.find(f => f.id === activeFolderId)?.workoutIds.includes(w.id))
     : workouts;
@@ -166,10 +190,13 @@ export const Home: React.FC<HomeProps> = ({ onSelectWorkout, onNavigate }) => {
         onAction={() => activeFolderId ? setActiveFolderId(null) : onNavigate('LIBRARY')} 
       />
       <div className="flex gap-4 overflow-x-auto px-4 pb-4 hide-scrollbar">
-        {filteredByFolder.length > 0 ? filteredByFolder.sort((a, b) => b.lastModified - a.lastModified).map(w => (
-          <div key={w.id} onClick={() => onSelectWorkout(w)} className="cursor-pointer">
-            <WorkoutCard workout={w} />
-          </div>
+        {filteredByFolder.length > 0 ? [...filteredByFolder].sort((a, b) => b.lastModified - a.lastModified).map(w => (
+          <WorkoutCard 
+            key={w.id} 
+            workout={w} 
+            onSelect={onSelectWorkout}
+            onDelete={() => handleDeleteWorkout(w.id)} 
+          />
         )) : (
           <div className="w-full text-center py-8 text-gray-400 text-sm">No workouts in this section.</div>
         )}
