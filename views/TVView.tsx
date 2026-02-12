@@ -47,7 +47,6 @@ export const TVView: React.FC = () => {
 
   /**
    * Independent Local Timer
-   * Only stops if sync says paused or hits zero.
    */
   useEffect(() => {
     let interval: number;
@@ -61,7 +60,6 @@ export const TVView: React.FC = () => {
 
   /**
    * Refined Sync Logic
-   * Decouples the TV's focus from the phone's focus.
    */
   useEffect(() => {
     if (!syncData || !peerId) return;
@@ -69,14 +67,11 @@ export const TVView: React.FC = () => {
     const { workout, currentModuleIndex, timeLeft } = syncData;
     const currentPhoneModule = workout.modules[currentModuleIndex];
 
-    // Rule 1: If the phone is CURRENTLY on a module for this TV, we MUST sync.
     if (currentPhoneModule && currentPhoneModule.displayId === peerId) {
       if (activeModuleId !== currentPhoneModule.id) {
-        // Switch to the phone's active module
         setActiveModuleId(currentPhoneModule.id);
         setLocalTimeLeft(timeLeft);
       } else {
-        // Minor sync for drift (only if on same module)
         if (Math.abs(localTimeLeft - timeLeft) > 2) {
           setLocalTimeLeft(timeLeft);
         }
@@ -84,10 +79,7 @@ export const TVView: React.FC = () => {
       return;
     }
 
-    // Rule 2: If the phone is on a module for a DIFFERENT TV, 
-    // we only change the TV's state if we don't have one yet.
     if (!activeModuleId) {
-      // Find the first relevant module for this TV (next one or most recent)
       const bestModule = 
         workout.modules.find((m, idx) => idx > currentModuleIndex && m.displayId === peerId) ||
         [...workout.modules].reverse().find(m => m.displayId === peerId);
@@ -98,17 +90,11 @@ export const TVView: React.FC = () => {
         setLocalTimeLeft(bestModule.duration ?? baseEx?.duration ?? 60);
       }
     }
-
-    // Rule 3: If we ALREADY have an active module and Rule 1 didn't trigger,
-    // we just let our local timer keep running. We don't change anything.
-    // This prevents the timer from jumping to 0 when the phone moves to station B.
-
   }, [syncData?.currentModuleIndex, syncData?.workout.id, peerId, syncData?.timeLeft]);
 
-  // Handle waiting screen
   if (!syncData) {
     return (
-      <div className="h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-12 text-center">
+      <div className="h-screen w-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-12 text-center overflow-hidden">
         <div className="w-32 h-32 mb-8 border-4 border-[#E1523D]/20 rounded-full flex items-center justify-center relative">
           <div className="absolute inset-0 border-4 border-[#E1523D] rounded-full border-t-transparent animate-spin" />
           <svg className="w-12 h-12 text-[#E1523D]" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" /></svg>
@@ -128,7 +114,7 @@ export const TVView: React.FC = () => {
   
   if (!exerciseBase || !myModule) {
     return (
-      <div className="h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white text-center p-12">
+      <div className="h-screen w-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white text-center p-12 overflow-hidden">
          <h2 className="text-4xl font-black uppercase italic mb-4 opacity-20">No Assignment</h2>
       </div>
     );
@@ -136,57 +122,73 @@ export const TVView: React.FC = () => {
 
   const overrides = JSON.parse(localStorage.getItem('cf_exercise_overrides') || '{}');
   const exercise = overrides[exerciseBase.id] || exerciseBase;
-
-  // Determine actual visual status based on local timer vs phone index
+  const isLocallyRunning = localTimeLeft > 0;
   const myGlobalIndex = workout.modules.findIndex(m => m.id === activeModuleId);
   const isCurrentlyInSync = myGlobalIndex === currentModuleIndex;
-  
-  // A module is "active" if its local timer is still running
-  const isLocallyRunning = localTimeLeft > 0;
 
   return (
-    <div className="h-screen bg-black flex flex-col text-white overflow-hidden">
-      <div className="flex-1 relative">
-        {exercise.videoUrl ? (
-          <video key={exercise.id} src={exercise.videoUrl} autoPlay loop muted className="w-full h-full object-cover opacity-100" />
-        ) : (
-          <img src={exercise.thumbnail} className="w-full h-full object-cover opacity-100" alt={exercise.name} />
-        )}
+    <div className="h-screen w-screen bg-black flex flex-col text-white overflow-hidden select-none">
+      <div className="flex-1 relative flex items-center justify-center">
+        {/* Background Exercise Media */}
+        <div className="absolute inset-0 z-0">
+          {exercise.videoUrl ? (
+            <video key={exercise.id} src={exercise.videoUrl} autoPlay loop muted className="w-full h-full object-cover opacity-60" />
+          ) : (
+            <img src={exercise.thumbnail} className="w-full h-full object-cover opacity-40 blur-sm" alt={exercise.name} />
+          )}
+          {/* Subtle gradient overlay to enhance readability of centered text */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60" />
+        </div>
         
-        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-transparent p-12 flex flex-col justify-end items-center text-center">
-           <div className="mb-8">
+        {/* Centered Content Overlay */}
+        <div className="relative z-10 flex flex-col items-center justify-center text-center px-12 max-w-6xl w-full">
+           <div className="mb-6 animate-in fade-in zoom-in duration-500">
               {!isLocallyRunning ? (
-                <span className="bg-gray-600 border border-white/40 px-6 py-2 rounded-full text-xs font-black uppercase tracking-[0.2em] inline-block shadow-lg mb-4">Set Finished</span>
+                <span className="bg-gray-800/80 backdrop-blur-md border border-white/20 px-8 py-3 rounded-full text-sm font-black uppercase tracking-[0.3em] inline-block shadow-2xl mb-8">Set Finished</span>
               ) : !isCurrentlyInSync ? (
-                <span className="bg-blue-600 border border-white/40 px-6 py-2 rounded-full text-xs font-black uppercase tracking-[0.2em] inline-block shadow-lg mb-4">Completing Set</span>
+                <span className="bg-blue-600/80 backdrop-blur-md border border-white/20 px-8 py-3 rounded-full text-sm font-black uppercase tracking-[0.3em] inline-block shadow-2xl mb-8">Up Next / Overtime</span>
               ) : (
-                <span className="bg-green-600 border border-white/40 px-6 py-2 rounded-full text-xs font-black uppercase tracking-[0.2em] inline-block shadow-lg mb-4">Your Station</span>
+                <span className="bg-[#E1523D] border border-white/20 px-8 py-3 rounded-full text-sm font-black uppercase tracking-[0.3em] inline-block shadow-2xl mb-8 animate-pulse">Live Station</span>
               )}
-              <h2 className="text-9xl font-black uppercase italic tracking-tighter mb-2 leading-none drop-shadow-2xl">{exercise.name}</h2>
-              <p className="text-4xl text-[#E1523D] font-black uppercase tracking-[0.4em] drop-shadow-md">{exercise.category}</p>
+              
+              <h2 className="text-[8vw] lg:text-9xl font-black uppercase italic tracking-tighter mb-4 leading-none drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)]">
+                {exercise.name}
+              </h2>
+              <p className="text-[3vw] lg:text-4xl text-[#E1523D] font-black uppercase tracking-[0.5em] drop-shadow-lg opacity-90">
+                {exercise.category}
+              </p>
            </div>
            
-           <div className="relative mb-8">
-              <div className={`text-[24rem] leading-none font-black italic tabular-nums drop-shadow-[0_10px_60px_rgba(0,0,0,0.8)] ${isPaused && isCurrentlyInSync ? 'opacity-30' : 'text-white'}`}>
+           <div className="relative mt-4">
+              <div className={`text-[30vw] lg:text-[25rem] leading-none font-black italic tabular-nums drop-shadow-[0_15px_100px_rgba(0,0,0,0.9)] transition-all duration-300 ${isPaused && isCurrentlyInSync ? 'opacity-20 scale-90' : 'text-white'}`}>
                 {localTimeLeft}
               </div>
               {isPaused && isCurrentlyInSync && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                   <div className="px-16 py-8 bg-white text-black text-6xl font-black uppercase italic tracking-widest rounded-[40px] shadow-2xl">Paused</div>
+                <div className="absolute inset-0 flex items-center justify-center animate-in fade-in zoom-in duration-300">
+                   <div className="px-16 py-8 bg-white/10 backdrop-blur-xl text-white border-2 border-white/20 text-7xl font-black uppercase italic tracking-widest rounded-[40px] shadow-2xl">
+                     Paused
+                   </div>
                 </div>
               )}
            </div>
         </div>
       </div>
       
-      <div className="h-12 bg-white/10 relative">
+      {/* Footer Progress Bar */}
+      <div className="h-16 bg-black/80 backdrop-blur-md relative shrink-0 border-t border-white/5">
         <div 
-          className="h-full bg-[#E1523D] transition-all duration-1000 ease-linear shadow-[0_0_50px_rgba(225,82,61,1)]"
+          className="h-full bg-[#E1523D] transition-all duration-1000 ease-linear shadow-[0_0_50px_rgba(225,82,61,0.8)]"
           style={{ width: `${((currentModuleIndex + 1) / workout.modules.length) * 100}%` }}
         />
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <span className="text-xs font-black uppercase tracking-[0.8em] text-white drop-shadow-md">
-            GLOBAL PROGRESS: {currentModuleIndex + 1} / {workout.modules.length}
+        <div className="absolute inset-0 flex items-center justify-between px-12 pointer-events-none">
+          <span className="text-sm font-black uppercase tracking-widest text-white/40">
+            {workout.name}
+          </span>
+          <span className="text-sm font-black uppercase tracking-[0.5em] text-white">
+            PROGRESS: {currentModuleIndex + 1} / {workout.modules.length}
+          </span>
+          <span className="text-xs font-mono font-bold text-white/20 tracking-widest">
+            ID: {peerId}
           </span>
         </div>
       </div>
