@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Exercise, Workout } from '../types';
+import { Exercise, Workout, WorkoutModule } from '../types';
 import { MOCK_EXERCISES } from '../constants';
 
 export const TVView: React.FC = () => {
@@ -77,26 +77,31 @@ export const TVView: React.FC = () => {
   const isActiveTarget = currentModule.displayId === peerId;
   
   /**
-   * REVISED EXERCISE FINDER LOGIC
-   * We need to show the exercise that this TV is currently responsible for.
-   * 1. If the phone is currently on a module for THIS TV, show it.
-   * 2. Otherwise, find the NEAREST module for this TV (either coming up next or the last one completed).
+   * Find the most relevant module for this display.
    */
-  const myAssignedModule = 
-    // Is it the current one?
-    (workout.modules[currentModuleIndex].displayId === peerId ? workout.modules[currentModuleIndex] : null) ||
-    // Is there one coming up?
-    workout.modules.slice(currentModuleIndex).find(m => m.displayId === peerId) ||
-    // Is there one we already finished? (Work backwards)
-    [...workout.modules].reverse().find((m, idx) => {
-        const originalIdx = workout.modules.length - 1 - idx;
-        return originalIdx < currentModuleIndex && m.displayId === peerId;
-    });
+  const myModules = workout.modules.map((m, index) => ({ ...m, index }));
+  const myAssignedModules = myModules.filter(m => m.displayId === peerId);
+  
+  // Find the module that is either currently active, or the next one to become active
+  let myAssignedModule = myAssignedModules.find(m => m.index === currentModuleIndex);
+  let status: 'ACTIVE' | 'UPCOMING' | 'FINISHED' = 'ACTIVE';
+
+  if (!myAssignedModule) {
+    // If none are currently active, find the first upcoming one
+    myAssignedModule = myAssignedModules.find(m => m.index > currentModuleIndex);
+    status = 'UPCOMING';
+    
+    // If no upcoming ones, find the last finished one
+    if (!myAssignedModule && myAssignedModules.length > 0) {
+      myAssignedModule = myAssignedModules[myAssignedModules.length - 1];
+      status = 'FINISHED';
+    }
+  }
 
   const exerciseBase = myAssignedModule ? MOCK_EXERCISES.find(ex => ex.id === myAssignedModule.exerciseId) : null;
   
-  // If this TV isn't assigned to ANY module in the current workout, show a waiting screen
-  if (!exerciseBase) {
+  // If this TV isn't assigned to ANY module in the current workout
+  if (!exerciseBase || !myAssignedModule) {
     return (
       <div className="h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white text-center p-12">
          <h2 className="text-4xl font-black uppercase italic mb-4 opacity-20">No Assignment</h2>
@@ -109,12 +114,26 @@ export const TVView: React.FC = () => {
   const overrides = JSON.parse(localStorage.getItem('cf_exercise_overrides') || '{}');
   const exercise = overrides[exerciseBase.id] || exerciseBase;
 
+  // DECIDE WHAT TIMER TO SHOW
+  // If active: show the phone's timer
+  // If upcoming: show the module's full duration
+  // If finished: show 0
+  let displayTime = 0;
+  if (status === 'ACTIVE') {
+    displayTime = timeLeft;
+  } else if (status === 'UPCOMING') {
+    displayTime = myAssignedModule.duration ?? exercise.duration;
+  } else if (status === 'FINISHED') {
+    displayTime = 0;
+  }
+
   return (
     <div className="h-screen bg-black flex flex-col text-white overflow-hidden">
       <div className="flex-1 relative">
-        {/* Background Media - FORCED 100% OPACITY, NO BLUR, NO TRANSITIONS */}
+        {/* Background Media */}
         {exercise.videoUrl ? (
           <video 
+            key={exercise.id}
             src={exercise.videoUrl} 
             autoPlay 
             loop 
@@ -129,13 +148,20 @@ export const TVView: React.FC = () => {
           />
         )}
         
-        {/* Overlay - Reduced gradient intensity to keep it bright */}
+        {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-12 flex flex-col justify-end items-center text-center">
            <div className="mb-8">
-              {!isActiveTarget && (
+              {status === 'UPCOMING' && (
                 <div className="mb-4">
-                  <span className="bg-[#E1523D] border border-white/40 px-6 py-2 rounded-full text-xs font-black uppercase tracking-[0.2em] inline-block shadow-lg">
-                    Next Station
+                  <span className="bg-[#E1523D] border border-white/40 px-6 py-2 rounded-full text-xs font-black uppercase tracking-[0.2em] inline-block shadow-lg animate-pulse">
+                    Up Next
+                  </span>
+                </div>
+              )}
+              {status === 'FINISHED' && (
+                <div className="mb-4">
+                  <span className="bg-gray-600 border border-white/40 px-6 py-2 rounded-full text-xs font-black uppercase tracking-[0.2em] inline-block shadow-lg">
+                    Completed
                   </span>
                 </div>
               )}
@@ -148,10 +174,10 @@ export const TVView: React.FC = () => {
            </div>
            
            <div className="relative mb-8">
-              <div className={`text-[20rem] leading-none font-black italic tabular-nums drop-shadow-[0_10px_50px_rgba(0,0,0,0.5)] ${isPaused ? 'opacity-30' : 'text-white'}`}>
-                {timeLeft}
+              <div className={`text-[20rem] leading-none font-black italic tabular-nums drop-shadow-[0_10px_50px_rgba(0,0,0,0.5)] ${isPaused && status === 'ACTIVE' ? 'opacity-30' : 'text-white'}`}>
+                {displayTime}
               </div>
-              {isPaused && (
+              {isPaused && status === 'ACTIVE' && (
                 <div className="absolute inset-0 flex items-center justify-center">
                    <div className="px-16 py-8 bg-white text-black text-6xl font-black uppercase italic tracking-widest rounded-[40px] shadow-2xl">
                      Paused
