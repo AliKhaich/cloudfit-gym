@@ -73,58 +73,89 @@ export const TVView: React.FC = () => {
   const { workout, currentModuleIndex, timeLeft, isPaused } = syncData;
   const currentModule = workout.modules[currentModuleIndex];
   
-  // Find which exercise this TV is supposed to show right now
+  // Is this TV the 'Active' one for the current module selected on the phone?
   const isActiveTarget = currentModule.displayId === peerId;
   
-  // Find the exercise assigned to this TV in the workout
-  const myAssignedModule = workout.modules.find(m => m.displayId === peerId);
+  /**
+   * REVISED EXERCISE FINDER LOGIC
+   * We need to show the exercise that this TV is currently responsible for.
+   * 1. If the phone is currently on a module for THIS TV, show it.
+   * 2. Otherwise, find the NEAREST module for this TV (either coming up next or the last one completed).
+   */
+  const myAssignedModule = 
+    // Is it the current one?
+    (workout.modules[currentModuleIndex].displayId === peerId ? workout.modules[currentModuleIndex] : null) ||
+    // Is there one coming up?
+    workout.modules.slice(currentModuleIndex).find(m => m.displayId === peerId) ||
+    // Is there one we already finished? (Work backwards)
+    [...workout.modules].reverse().find((m, idx) => {
+        const originalIdx = workout.modules.length - 1 - idx;
+        return originalIdx < currentModuleIndex && m.displayId === peerId;
+    });
+
   const exerciseBase = myAssignedModule ? MOCK_EXERCISES.find(ex => ex.id === myAssignedModule.exerciseId) : null;
   
   // If this TV isn't assigned to ANY module in the current workout, show a waiting screen
   if (!exerciseBase) {
     return (
-      <div className="h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white text-center">
+      <div className="h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white text-center p-12">
          <h2 className="text-4xl font-black uppercase italic mb-4 opacity-20">No Assignment</h2>
-         <p className="text-gray-500 font-bold uppercase tracking-widest">Check workout settings on your phone</p>
+         <p className="text-gray-500 font-bold uppercase tracking-widest">This display is not part of the active workout session.</p>
       </div>
     );
   }
 
-  // Check if we have an AI override
+  // Check for AI overrides
   const overrides = JSON.parse(localStorage.getItem('cf_exercise_overrides') || '{}');
   const exercise = overrides[exerciseBase.id] || exerciseBase;
 
   return (
-    <div className="h-screen bg-black flex flex-col text-white animate-in fade-in duration-500 overflow-hidden">
+    <div className="h-screen bg-black flex flex-col text-white overflow-hidden">
       <div className="flex-1 relative">
+        {/* Background Media - FORCED 100% OPACITY, NO BLUR, NO TRANSITIONS */}
         {exercise.videoUrl ? (
           <video 
             src={exercise.videoUrl} 
             autoPlay 
             loop 
             muted 
-            className="w-full h-full object-cover transition-opacity duration-1000 opacity-100"
+            className="w-full h-full object-cover opacity-100"
           />
         ) : (
-          <img src={exercise.thumbnail} className="w-full h-full object-cover blur-xl transition-opacity duration-1000 opacity-40" alt={exercise.name} />
+          <img 
+            src={exercise.thumbnail} 
+            className="w-full h-full object-cover opacity-100" 
+            alt={exercise.name} 
+          />
         )}
         
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-12 flex flex-col justify-end items-center text-center">
-           <div className="mb-8 transition-all duration-1000 scale-100">
+        {/* Overlay - Reduced gradient intensity to keep it bright */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-12 flex flex-col justify-end items-center text-center">
+           <div className="mb-8">
               {!isActiveTarget && (
-                <span className="bg-[#E1523D]/50 border border-white/20 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 inline-block backdrop-blur-md">Next Station</span>
+                <div className="mb-4">
+                  <span className="bg-[#E1523D] border border-white/40 px-6 py-2 rounded-full text-xs font-black uppercase tracking-[0.2em] inline-block shadow-lg">
+                    Next Station
+                  </span>
+                </div>
               )}
-              <h2 className="text-8xl font-black uppercase italic tracking-tighter mb-2 leading-none">{exercise.name}</h2>
-              <p className="text-3xl text-[#E1523D] font-black uppercase tracking-[0.3em]">{exercise.category}</p>
+              <h2 className="text-9xl font-black uppercase italic tracking-tighter mb-2 leading-none drop-shadow-2xl">
+                {exercise.name}
+              </h2>
+              <p className="text-4xl text-[#E1523D] font-black uppercase tracking-[0.4em] drop-shadow-md">
+                {exercise.category}
+              </p>
            </div>
            
-           <div className="relative">
-              <div className={`text-[18rem] leading-none font-black italic tabular-nums transition-all duration-500 ${isPaused ? 'opacity-20' : 'text-white'}`}>
+           <div className="relative mb-8">
+              <div className={`text-[20rem] leading-none font-black italic tabular-nums drop-shadow-[0_10px_50px_rgba(0,0,0,0.5)] ${isPaused ? 'opacity-30' : 'text-white'}`}>
                 {timeLeft}
               </div>
               {isPaused && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                   <div className="px-16 py-8 bg-white text-black text-5xl font-black uppercase italic tracking-widest rounded-[40px] shadow-2xl">Paused</div>
+                   <div className="px-16 py-8 bg-white text-black text-6xl font-black uppercase italic tracking-widest rounded-[40px] shadow-2xl">
+                     Paused
+                   </div>
                 </div>
               )}
            </div>
@@ -132,13 +163,13 @@ export const TVView: React.FC = () => {
       </div>
       
       {/* Global Progress Bar */}
-      <div className="h-8 bg-white/10 relative">
+      <div className="h-10 bg-white/10 relative">
         <div 
-          className="h-full bg-[#E1523D] transition-all duration-1000 ease-linear shadow-[0_0_40px_rgba(225,82,61,0.8)]"
+          className="h-full bg-[#E1523D] transition-all duration-1000 ease-linear shadow-[0_0_50px_rgba(225,82,61,1)]"
           style={{ width: `${((currentModuleIndex + 1) / workout.modules.length) * 100}%` }}
         />
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white/50">
+          <span className="text-xs font-black uppercase tracking-[0.6em] text-white">
             Workout Progress: {currentModuleIndex + 1} / {workout.modules.length}
           </span>
         </div>
