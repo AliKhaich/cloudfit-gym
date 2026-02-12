@@ -5,9 +5,11 @@ import { MOCK_EXERCISES } from '../constants';
 
 interface WorkoutCardProps {
   workout: Workout;
+  onSelect?: (workout: Workout) => void;
+  onDelete?: (id: string, e: React.MouseEvent) => void;
 }
 
-export const WorkoutCard: React.FC<WorkoutCardProps> = ({ workout }) => {
+export const WorkoutCard: React.FC<WorkoutCardProps> = ({ workout, onSelect, onDelete }) => {
   const calculateTotalTime = () => {
     const totalSeconds = workout.modules.reduce((acc, m) => {
       const exercise = MOCK_EXERCISES.find(ex => ex.id === m.exerciseId);
@@ -20,18 +22,58 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({ workout }) => {
   };
 
   return (
-    <div className="min-w-[280px] bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between relative h-32">
-      <div>
-        <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-          {workout.modules.length} {workout.modules.length === 1 ? 'module' : 'modules'}, {calculateTotalTime()}
-        </p>
-        <h4 className="text-xl font-semibold text-gray-900 mt-1">{workout.name}</h4>
+    <div className="relative min-w-[280px] h-32 group">
+      {/* Main Clickable Area - Card Content */}
+      <div 
+        onClick={() => onSelect?.(workout)}
+        className="absolute inset-0 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between hover:border-[#E1523D]/30 transition-all cursor-pointer active:scale-[0.98] z-10"
+      >
+        <div>
+          <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
+            {workout.modules.length} {workout.modules.length === 1 ? 'module' : 'modules'}, {calculateTotalTime()}
+          </p>
+          <h4 className="text-xl font-semibold text-gray-900 mt-1 truncate pr-8">{workout.name}</h4>
+        </div>
+        
+        <div className="flex justify-between items-center">
+          <div className="flex -space-x-2">
+            {workout.modules.slice(0, 3).map((m, i) => (
+              <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center overflow-hidden">
+                 <img src={MOCK_EXERCISES.find(ex => ex.id === m.exerciseId)?.thumbnail} className="w-full h-full object-cover" alt="" />
+              </div>
+            ))}
+            {workout.modules.length > 3 && (
+              <div className="w-6 h-6 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-[8px] font-black text-gray-500">
+                +{workout.modules.length - 3}
+              </div>
+            )}
+          </div>
+          
+          <div className="p-2 text-gray-300 group-hover:text-gray-400 transition-colors">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+            </svg>
+          </div>
+        </div>
       </div>
-      <button className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-gray-100 rounded-full transition-colors">
-        <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-        </svg>
-      </button>
+
+      {/* Independent Delete Button - High Z-Index & Sibling to avoid bubbling */}
+      {onDelete && (
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(workout.id, e);
+          }}
+          className="absolute -top-2 -right-2 w-10 h-10 bg-white rounded-full shadow-lg border border-gray-100 flex items-center justify-center z-50 hover:bg-red-50 transition-all active:scale-90 group/del"
+          title="Delete Workout"
+        >
+          <div className="w-7 h-7 bg-red-500 rounded-full flex items-center justify-center text-white shadow-sm group-hover/del:bg-red-600 transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" />
+            </svg>
+          </div>
+        </button>
+      )}
     </div>
   );
 };
