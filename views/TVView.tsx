@@ -1,14 +1,21 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Exercise } from '../types';
+import { Exercise, Workout } from '../types';
+import { MOCK_EXERCISES } from '../constants';
 
 export const TVView: React.FC = () => {
-  const [session, setSession] = useState<{ exercise: Exercise; timeLeft: number; isPaused: boolean } | null>(null);
+  const [syncData, setSyncData] = useState<{ 
+    workout: Workout; 
+    currentModuleIndex: number; 
+    timeLeft: number; 
+    isPaused: boolean 
+  } | null>(null);
+  
   const [peerId, setPeerId] = useState<string>('');
   const peerRef = useRef<any>(null);
 
   useEffect(() => {
-    // Generate a short 6-char random ID for easy typing
+    // Generate a short 6-char random ID for easy pairing
     const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     
     // @ts-ignore
@@ -21,10 +28,10 @@ export const TVView: React.FC = () => {
 
     peer.on('connection', (conn: any) => {
       conn.on('data', (data: any) => {
-        if (data.type === 'SYNC_STATE') {
-          setSession(data.payload);
+        if (data.type === 'GLOBAL_SYNC') {
+          setSyncData(data.payload);
         } else if (data.type === 'END_SESSION') {
-          setSession(null);
+          setSyncData(null);
         }
       });
     });
@@ -34,7 +41,8 @@ export const TVView: React.FC = () => {
     };
   }, []);
 
-  if (!session) {
+  // Waiting screen when no workout is casting to this display
+  if (!syncData) {
     return (
       <div className="h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white p-12 text-center">
         <div className="w-32 h-32 mb-8 border-4 border-[#E1523D]/20 rounded-full flex items-center justify-center relative">
@@ -62,7 +70,35 @@ export const TVView: React.FC = () => {
     );
   }
 
-  const { exercise, timeLeft, isPaused } = session;
+  const { workout, currentModuleIndex, timeLeft, isPaused } = syncData;
+  const currentModule = workout.modules[currentModuleIndex];
+  
+  // Find which exercise this TV is supposed to show right now
+  // First priority: Is this TV the 'Active' one for the current module?
+  const isActiveTarget = currentModule.displayId === peerId;
+  
+  // Find the exercise assigned to this TV in the workout
+  // (In station mode, it might show its assigned station even if another station is 'active')
+  const myAssignedModule = workout.modules.find(m => m.displayId === peerId);
+  const exerciseBase = myAssignedModule ? MOCK_EXERCISES.find(ex => ex.id === myAssignedModule.exerciseId) : null;
+  
+  // Determine if this TV should be "Working" or "Resting/Waiting"
+  // If this TV isn't assigned to ANY module in the current workout, show a waiting screen
+  if (!exerciseBase) {
+    return (
+      <div className="h-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white text-center">
+         <h2 className="text-4xl font-black uppercase italic mb-4 opacity-20">No Assignment</h2>
+         <p className="text-gray-500 font-bold uppercase tracking-widest">Check workout settings on your phone</p>
+      </div>
+    );
+  }
+
+  // Check if we have an AI override (locally stored on the TV if it's been generated)
+  const overrides = JSON.parse(localStorage.getItem('cf_exercise_overrides') || '{}');
+  const exercise = overrides[exerciseBase.id] || exerciseBase;
+
+  // Visual logic: dim the display if this TV isn't the current focus of the phone
+  const shouldDim = !isActiveTarget;
 
   return (
     <div className="h-screen bg-black flex flex-col text-white animate-in fade-in duration-500 overflow-hidden">
@@ -73,20 +109,23 @@ export const TVView: React.FC = () => {
             autoPlay 
             loop 
             muted 
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover transition-opacity duration-1000 ${shouldDim ? 'opacity-30' : 'opacity-100'}`}
           />
         ) : (
-          <img src={exercise.thumbnail} className="w-full h-full object-cover opacity-40 blur-xl" />
+          <img src={exercise.thumbnail} className={`w-full h-full object-cover blur-xl transition-opacity duration-1000 ${shouldDim ? 'opacity-10' : 'opacity-40'}`} alt={exercise.name} />
         )}
         
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-12 flex flex-col justify-end items-center text-center">
-           <div className="mb-8">
-              <h2 className="text-8xl font-black uppercase italic tracking-tighter mb-2">{exercise.name}</h2>
+           <div className={`mb-8 transition-all duration-1000 ${shouldDim ? 'scale-75 opacity-50' : 'scale-100'}`}>
+              {!isActiveTarget && (
+                <span className="bg-[#E1523D] px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest mb-4 inline-block">Standby</span>
+              )}
+              <h2 className="text-8xl font-black uppercase italic tracking-tighter mb-2 leading-none">{exercise.name}</h2>
               <p className="text-3xl text-[#E1523D] font-black uppercase tracking-[0.3em]">{exercise.category}</p>
            </div>
            
            <div className="relative">
-              <div className={`text-[15rem] leading-none font-black italic tabular-nums ${isPaused ? 'opacity-20' : 'text-white'}`}>
+              <div className={`text-[18rem] leading-none font-black italic tabular-nums transition-all duration-500 ${isPaused || shouldDim ? 'opacity-20' : 'text-white'}`}>
                 {timeLeft}
               </div>
               {isPaused && (
@@ -98,11 +137,17 @@ export const TVView: React.FC = () => {
         </div>
       </div>
       
-      <div className="h-6 bg-white/10 relative">
+      {/* Global Progress Bar */}
+      <div className="h-8 bg-white/10 relative">
         <div 
-          className="h-full bg-[#E1523D] transition-all duration-1000 ease-linear shadow-[0_0_30px_rgba(225,82,61,0.6)]"
-          style={{ width: `${(timeLeft / exercise.duration) * 100}%` }}
+          className="h-full bg-[#E1523D] transition-all duration-1000 ease-linear shadow-[0_0_40px_rgba(225,82,61,0.8)]"
+          style={{ width: `${((currentModuleIndex + 1) / workout.modules.length) * 100}%` }}
         />
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white/50">
+            Workout Progress: {currentModuleIndex + 1} / {workout.modules.length}
+          </span>
+        </div>
       </div>
     </div>
   );
