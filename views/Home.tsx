@@ -82,6 +82,12 @@ export const Home: React.FC<HomeProps> = ({ onSelectWorkout, onNavigate }) => {
     setPairingCode(['', '', '', '', '', '']);
   };
 
+  const handleRemoveDisplay = (id: string) => {
+    const updated = displays.filter(d => d.id !== id);
+    storage.setDisplays(updated);
+    setDisplays(updated);
+  };
+
   const handleCodeChange = (index: number, val: string) => {
     const v = val.toUpperCase();
     if (v.length > 1) return;
@@ -130,13 +136,23 @@ export const Home: React.FC<HomeProps> = ({ onSelectWorkout, onNavigate }) => {
              <h3 className="text-sm font-bold text-gray-800">Paired Displays</h3>
              <button onClick={() => setShowPairingModal(true)} className="text-[#E1523D] text-xs font-bold">+ PAIR NEW</button>
            </div>
-           <div className="flex gap-4 overflow-x-auto hide-scrollbar">
+           <div className="flex gap-4 overflow-x-auto hide-scrollbar pt-2 pb-1">
              {displays.map(d => (
-               <div key={d.id} className="min-w-[120px] bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col items-center">
+               <div key={d.id} className="relative min-w-[120px] bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col items-center">
+                 <button 
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     handleRemoveDisplay(d.id);
+                   }}
+                   className="absolute -top-1 -right-1 w-5 h-5 bg-white text-gray-400 hover:text-red-500 rounded-full border border-gray-200 flex items-center justify-center shadow-sm z-10 active:scale-90 transition-all"
+                   title="Remove Display"
+                 >
+                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" /></svg>
+                 </button>
                  <div className="w-10 h-8 border-2 border-[#E1523D] rounded flex items-center justify-center mb-2">
                    <div className="w-4 h-1 bg-[#E1523D] rounded-full"></div>
                  </div>
-                 <span className="text-[10px] font-bold text-gray-700 truncate w-full text-center">{d.name}</span>
+                 <span className="text-[10px] font-bold text-gray-700 truncate w-full text-center px-1">{d.name}</span>
                  <span className="text-[8px] text-gray-400 font-mono mt-1">ID: {d.id}</span>
                </div>
              ))}
