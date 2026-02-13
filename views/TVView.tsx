@@ -127,69 +127,97 @@ export const TVView: React.FC = () => {
   const isCurrentlyInSync = myGlobalIndex === currentModuleIndex;
 
   return (
-    <div className="h-screen w-screen bg-black flex flex-col text-white overflow-hidden select-none">
-      <div className="flex-1 relative flex items-center justify-center">
-        {/* Background Exercise Media */}
-        <div className="absolute inset-0 z-0">
-          {exercise.videoUrl ? (
-            <video key={exercise.id} src={exercise.videoUrl} autoPlay loop muted className="w-full h-full object-cover opacity-60" />
-          ) : (
-            <img src={exercise.thumbnail} className="w-full h-full object-cover opacity-40 blur-sm" alt={exercise.name} />
-          )}
-          {/* Subtle gradient overlay to enhance readability of centered text */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60" />
-        </div>
+    <div className="h-screen w-screen bg-black flex flex-col text-white overflow-hidden select-none relative">
+      {/* Background Atmosphere */}
+      <div className="absolute inset-0 z-0">
+        {exercise.videoUrl ? (
+          <video key={exercise.id} src={exercise.videoUrl} autoPlay loop muted className="w-full h-full object-cover opacity-30 blur-xl" />
+        ) : (
+          <img src={exercise.thumbnail} className="w-full h-full object-cover opacity-20 blur-2xl" alt="" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-black/90" />
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 relative z-10 flex flex-col items-center justify-end pb-12 px-12">
         
-        {/* Centered Content Overlay */}
-        <div className="relative z-10 flex flex-col items-center justify-center text-center px-12 max-w-6xl w-full">
-           <div className="mb-6 animate-in fade-in zoom-in duration-500">
-              {!isLocallyRunning ? (
-                <span className="bg-gray-800/80 backdrop-blur-md border border-white/20 px-8 py-3 rounded-full text-sm font-black uppercase tracking-[0.3em] inline-block shadow-2xl mb-8">Set Finished</span>
-              ) : !isCurrentlyInSync ? (
-                <span className="bg-blue-600/80 backdrop-blur-md border border-white/20 px-8 py-3 rounded-full text-sm font-black uppercase tracking-[0.3em] inline-block shadow-2xl mb-8">Up Next / Overtime</span>
-              ) : (
-                <span className="bg-[#E1523D] border border-white/20 px-8 py-3 rounded-full text-sm font-black uppercase tracking-[0.3em] inline-block shadow-2xl mb-8 animate-pulse">Live Station</span>
-              )}
-              
-              <h2 className="text-[8vw] lg:text-9xl font-black uppercase italic tracking-tighter mb-4 leading-none drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)]">
-                {exercise.name}
-              </h2>
-              <p className="text-[3vw] lg:text-4xl text-[#E1523D] font-black uppercase tracking-[0.5em] drop-shadow-lg opacity-90">
-                {exercise.category}
-              </p>
-           </div>
-           
-           <div className="relative mt-4">
-              <div className={`text-[30vw] lg:text-[25rem] leading-none font-black italic tabular-nums drop-shadow-[0_15px_100px_rgba(0,0,0,0.9)] transition-all duration-300 ${isPaused && isCurrentlyInSync ? 'opacity-20 scale-90' : 'text-white'}`}>
-                {localTimeLeft}
+        {/* Video Demonstration Area (ABOVE text) */}
+        <div className="w-full max-w-5xl aspect-video bg-black rounded-[48px] overflow-hidden border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.8)] mb-12 animate-in slide-in-from-top duration-700">
+           {exercise.videoUrl ? (
+             <video key={`demo-${exercise.id}`} src={exercise.videoUrl} autoPlay loop muted className="w-full h-full object-cover" />
+           ) : (
+             <img src={exercise.thumbnail} className="w-full h-full object-cover" alt={exercise.name} />
+           )}
+           {/* Overlays on Video */}
+           {!isCurrentlyInSync && (
+             <div className="absolute inset-0 bg-blue-900/40 backdrop-blur-sm flex items-center justify-center">
+                <div className="bg-blue-600 px-8 py-4 rounded-full text-2xl font-black uppercase tracking-widest shadow-2xl">Up Next</div>
+             </div>
+           )}
+        </div>
+
+        {/* Content Area (BOTTOM CENTER) */}
+        <div className="text-center w-full max-w-6xl animate-in fade-in slide-in-from-bottom duration-1000">
+          <div className="mb-4">
+            {!isLocallyRunning ? (
+              <span className="bg-gray-800/80 backdrop-blur-md border border-white/20 px-8 py-2 rounded-full text-xs font-black uppercase tracking-[0.3em] inline-block shadow-2xl mb-6">Set Finished</span>
+            ) : isCurrentlyInSync ? (
+              <span className="bg-[#E1523D] border border-white/20 px-8 py-2 rounded-full text-xs font-black uppercase tracking-[0.3em] inline-block shadow-2xl mb-6 animate-pulse">Live Station</span>
+            ) : (
+               <span className="bg-blue-600/80 px-8 py-2 rounded-full text-xs font-black uppercase tracking-[0.3em] inline-block shadow-2xl mb-6">Preview Mode</span>
+            )}
+            
+            <h2 className="text-[6vw] font-black uppercase italic tracking-tighter mb-2 leading-none drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)]">
+              {exercise.name}
+            </h2>
+            <p className="text-[1.5vw] text-[#E1523D] font-black uppercase tracking-[0.5em] drop-shadow-lg opacity-80 mb-6">
+              {exercise.category}
+            </p>
+          </div>
+
+          {/* Large Timer Area */}
+          <div className="relative inline-block">
+            <div className={`text-[18vw] leading-none font-black italic tabular-nums drop-shadow-[0_15px_100px_rgba(0,0,0,0.9)] transition-all duration-300 ${isPaused && isCurrentlyInSync ? 'opacity-10 scale-90' : 'text-white'}`}>
+              {localTimeLeft}
+            </div>
+            
+            {isPaused && isCurrentlyInSync && (
+              <div className="absolute inset-0 flex items-center justify-center animate-in fade-in zoom-in duration-300">
+                 <div className="px-12 py-4 bg-white/10 backdrop-blur-xl text-white border-2 border-white/20 text-4xl font-black uppercase italic tracking-widest rounded-[24px] shadow-2xl">
+                   Paused
+                 </div>
               </div>
-              {isPaused && isCurrentlyInSync && (
-                <div className="absolute inset-0 flex items-center justify-center animate-in fade-in zoom-in duration-300">
-                   <div className="px-16 py-8 bg-white/10 backdrop-blur-xl text-white border-2 border-white/20 text-7xl font-black uppercase italic tracking-widest rounded-[40px] shadow-2xl">
-                     Paused
-                   </div>
-                </div>
-              )}
-           </div>
+            )}
+          </div>
         </div>
       </div>
       
       {/* Footer Progress Bar */}
-      <div className="h-16 bg-black/80 backdrop-blur-md relative shrink-0 border-t border-white/5">
+      <div className="h-20 bg-black/90 backdrop-blur-2xl relative shrink-0 border-t border-white/5 z-20">
         <div 
-          className="h-full bg-[#E1523D] transition-all duration-1000 ease-linear shadow-[0_0_50px_rgba(225,82,61,0.8)]"
+          className="h-full bg-[#E1523D] transition-all duration-1000 ease-linear shadow-[0_0_50px_rgba(225,82,61,0.5)]"
           style={{ width: `${((currentModuleIndex + 1) / workout.modules.length) * 100}%` }}
         />
-        <div className="absolute inset-0 flex items-center justify-between px-12 pointer-events-none">
-          <span className="text-sm font-black uppercase tracking-widest text-white/40">
-            {workout.name}
-          </span>
-          <span className="text-sm font-black uppercase tracking-[0.5em] text-white">
-            PROGRESS: {currentModuleIndex + 1} / {workout.modules.length}
-          </span>
-          <span className="text-xs font-mono font-bold text-white/20 tracking-widest">
-            ID: {peerId}
-          </span>
+        <div className="absolute inset-0 flex items-center justify-between px-16 pointer-events-none">
+          <div className="flex items-center gap-6">
+            <span className="text-xl font-black uppercase italic tracking-widest text-white/30">
+              {workout.name}
+            </span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-sm font-black uppercase tracking-[0.8em] text-white">
+              STATION PROGRESS
+            </span>
+            <span className="text-2xl font-black italic text-[#E1523D]">
+              {currentModuleIndex + 1} <span className="text-white/20 text-lg not-italic mx-1">/</span> {workout.modules.length}
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-1 bg-white/20 rounded-full" />
+            <span className="text-xs font-mono font-bold text-white/20 tracking-widest">
+              DEVICE: {peerId}
+            </span>
+          </div>
         </div>
       </div>
     </div>
