@@ -19,7 +19,7 @@ export const MOCK_EXERCISES: Exercise[] = [
     id: '1', 
     name: 'Jumping Jacks', 
     category: 'Cardio', 
-    duration: 620, 
+    duration: 600, 
     thumbnail: './assets/push_ups.jpeg',
     videoUrl: './assets/pushup.mp4' 
   },
@@ -27,7 +27,7 @@ export const MOCK_EXERCISES: Exercise[] = [
     id: '2', 
     name: 'Push Ups', 
     category: 'Strength', 
-    duration: 45, 
+    duration: 600, 
     thumbnail: './assets/pushups_thumb.png',
     videoUrl: './assets/pushups_video.mp4'
   },
@@ -35,7 +35,7 @@ export const MOCK_EXERCISES: Exercise[] = [
     id: '3', 
     name: 'Plank', 
     category: 'Core', 
-    duration: 30, 
+    duration: 600, 
     thumbnail: './assets/plank_thumb.png',
     videoUrl: './assets/plank_video.mp4'
   },
@@ -43,7 +43,7 @@ export const MOCK_EXERCISES: Exercise[] = [
     id: '4', 
     name: 'Squats', 
     category: 'Legs', 
-    duration: 60, 
+    duration: 600, 
     thumbnail: './assets/squats_thumb.png',
     videoUrl: './assets/squats_video.mp4'
   },
@@ -51,7 +51,7 @@ export const MOCK_EXERCISES: Exercise[] = [
     id: '5', 
     name: 'Burpees', 
     category: 'HIIT', 
-    duration: 45, 
+    duration: 600, 
     thumbnail: './assets/burpees_thumb.png',
     videoUrl: './assets/burpees_video.mp4'
   },
@@ -59,7 +59,7 @@ export const MOCK_EXERCISES: Exercise[] = [
     id: '6', 
     name: 'Bicep Curls', 
     category: 'Strength', 
-    duration: 50, 
+    duration: 600, 
     thumbnail: './assets/curls_thumb.png',
     videoUrl: './assets/curls_video.mp4'
   },
@@ -70,9 +70,9 @@ export const TEMPLATE_WORKOUTS: Workout[] = [
     id: 't1',
     name: 'Morning Energy',
     modules: [
-      { id: 'm1', exerciseId: '1', displayId: 'local', duration: 650 },
-      { id: 'm2', exerciseId: '4', displayId: 'local', duration: 60 },
-      { id: 'm3', exerciseId: '5', displayId: 'local', duration: 30 }
+      { id: 'm1', exerciseId: '1', displayId: 'local', duration: 600 },
+      { id: 'm2', exerciseId: '4', displayId: 'local', duration: 600 },
+      { id: 'm3', exerciseId: '5', displayId: 'local', duration: 600 }
     ],
     lastModified: Date.now(),
     scheduledDays: [1, 3, 5]
@@ -81,8 +81,8 @@ export const TEMPLATE_WORKOUTS: Workout[] = [
     id: 't2',
     name: 'Core Crusher',
     modules: [
-      { id: 'm4', exerciseId: '3', displayId: 'local', duration: 60 },
-      { id: 'm5', exerciseId: '3', displayId: 'local', duration: 60 }
+      { id: 'm4', exerciseId: '3', displayId: 'local', duration: 600 },
+      { id: 'm5', exerciseId: '3', displayId: 'local', duration: 600 }
     ],
     lastModified: Date.now(),
     scheduledDays: [2, 4]
@@ -91,8 +91,8 @@ export const TEMPLATE_WORKOUTS: Workout[] = [
     id: 't3',
     name: 'Quick Strength',
     modules: [
-      { id: 'm6', exerciseId: '2', displayId: 'local', duration: 45 },
-      { id: 'm7', exerciseId: '6', displayId: 'local', duration: 45 }
+      { id: 'm6', exerciseId: '2', displayId: 'local', duration: 600 },
+      { id: 'm7', exerciseId: '6', displayId: 'local', duration: 600 }
     ],
     lastModified: Date.now(),
     scheduledDays: [0, 6]
