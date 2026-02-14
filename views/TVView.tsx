@@ -100,7 +100,6 @@ export const TVView: React.FC = () => {
 
   const overrides = JSON.parse(localStorage.getItem('cf_exercise_overrides') || '{}');
   const exercise = overrides[exerciseBase.id] || exerciseBase;
-  const isLocallyRunning = localTimeLeft > 0;
   const isCurrentlyInSync = workout.modules.findIndex(m => m.id === activeModuleId) === currentModuleIndex;
 
   return (
@@ -115,32 +114,27 @@ export const TVView: React.FC = () => {
       </div>
 
       <div className="flex-1 relative z-10 flex flex-col items-center justify-center py-2 px-8 overflow-hidden">
+        {/* TOP: Video Demonstration Area */}
         <div className="w-full max-w-4xl max-h-[40vh] aspect-video bg-[#0A0A0A] rounded-[24px] overflow-hidden border border-white/5 shadow-2xl relative flex-shrink">
            {(localVideoUrl || exercise.videoUrl) ? (
              <video key={`demo-${exercise.id}`} src={localVideoUrl || exercise.videoUrl} autoPlay loop muted className="w-full h-full object-contain" />
            ) : (
              <img src={exercise.thumbnail} className="w-full h-full object-contain" alt={exercise.name} />
            )}
+           {/* Dimming overlay for inactive stations - text removed */}
            {!isCurrentlyInSync && (
-             <div className="absolute inset-0 bg-blue-900/60 backdrop-blur-sm flex items-center justify-center">
-                <div className="bg-blue-600 px-6 py-2 rounded-full text-lg font-black uppercase tracking-widest shadow-2xl border border-white/20">Up Next</div>
-             </div>
+             <div className="absolute inset-0 bg-blue-900/40 backdrop-blur-[2px] flex items-center justify-center transition-all duration-500" />
            )}
         </div>
 
+        {/* BOTTOM OFFSET: Content Area - Cleaned up status labels */}
         <div className="flex flex-col items-center justify-center text-center w-full max-w-4xl mt-4 animate-in fade-in slide-in-from-bottom duration-1000 overflow-hidden">
           <div className="mb-1">
-            {!isLocallyRunning ? (
-              <span className="bg-gray-800/80 backdrop-blur-md border border-white/10 px-4 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] inline-block shadow-lg mb-1">Set Finished</span>
-            ) : isCurrentlyInSync ? (
-              <span className="bg-[#E1523D] border border-white/20 px-4 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] inline-block shadow-lg mb-1 animate-pulse">Live Station</span>
-            ) : (
-               <span className="bg-blue-600/80 px-4 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] inline-block shadow-lg mb-1">Preview</span>
-            )}
             <h2 className="text-[2.8vw] lg:text-3xl font-black uppercase italic tracking-tighter mb-0.5 leading-none drop-shadow-2xl truncate w-full px-4">{exercise.name}</h2>
             <p className="text-[0.8vw] lg:text-sm text-[#E1523D] font-black uppercase tracking-[0.3em] drop-shadow-md opacity-80 mb-1">{exercise.category}</p>
           </div>
 
+          {/* Timer Area - Simplified */}
           <div className="relative inline-block flex-shrink">
             <div className={`text-[4vw] lg:text-[4.5rem] leading-none font-black italic tabular-nums drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-300 ${isPaused && isCurrentlyInSync ? 'opacity-10 scale-90' : 'text-white'}`}>
               {localTimeLeft}
@@ -151,10 +145,10 @@ export const TVView: React.FC = () => {
               </div>
             )}
           </div>
-          <p className="text-[7px] font-black uppercase tracking-[0.4em] text-white/30 mt-1">SECONDS REMAINING</p>
         </div>
       </div>
       
+      {/* Footer Progress Bar */}
       <div className="h-12 bg-[#0A0A0A]/95 backdrop-blur-3xl relative shrink-0 border-t border-white/5 z-20">
         <div className="h-full bg-[#E1523D] transition-all duration-1000 ease-linear shadow-[0_0_30px_rgba(225,82,61,0.3)]" style={{ width: `${((currentModuleIndex + 1) / workout.modules.length) * 100}%` }} />
         <div className="absolute inset-0 flex items-center justify-between px-10 pointer-events-none">
