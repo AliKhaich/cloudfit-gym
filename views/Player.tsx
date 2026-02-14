@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Workout, Exercise, LOCAL_DISPLAY_ID } from '../types';
 import { MOCK_EXERCISES } from '../constants';
 import { assetStorage } from '../services/assetStorage';
+import { storage } from '../services/storage';
 
 interface PlayerProps {
   workout: Workout;
@@ -77,7 +78,9 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
   useEffect(() => {
     const loadExercise = async () => {
       if (currentModule) {
-        const baseEx = MOCK_EXERCISES.find(ex => ex.id === currentModule.exerciseId);
+        const allAvailableExercises = [...MOCK_EXERCISES, ...storage.getCustomExercises()];
+        const baseEx = allAvailableExercises.find(ex => ex.id === currentModule.exerciseId);
+        
         if (baseEx) {
           const overrides = JSON.parse(localStorage.getItem('cf_exercise_overrides') || '{}');
           const finalEx = overrides[baseEx.id] || baseEx;
@@ -85,10 +88,12 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
 
           const localUrl = await assetStorage.getAsset(finalEx.id, 'video');
           setLocalVideoUrl(localUrl);
+          
+          const moduleDuration = currentModule.duration ?? finalEx.duration ?? 0;
+          setTimeLeft(moduleDuration);
+        } else {
+          setExercise(null);
         }
-        
-        const moduleDuration = currentModule.duration ?? MOCK_EXERCISES.find(ex => ex.id === currentModule.exerciseId)?.duration ?? 0;
-        setTimeLeft(moduleDuration);
         setIsInitialLoading(false);
       } else {
         setExercise(null);
