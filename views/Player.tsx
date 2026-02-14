@@ -54,13 +54,16 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
     };
   }, [workout]);
 
-  const syncToAll = async (forceVideoSync = false) => {
-    if (!currentModule) return;
+  const syncToAll = async (forceFullSync = false) => {
+    if (!currentModule || !exercise) return;
 
     let localVideoBlob: Blob | null = null;
-    // Only send the heavy video blob if the module has changed or we force it
-    if (forceVideoSync || currentModule.id !== lastSyncedModuleId.current) {
+    let localThumbnailBlob: Blob | null = null;
+    
+    // Only send the heavy blobs if the module has changed or we force it
+    if (forceFullSync || currentModule.id !== lastSyncedModuleId.current) {
       localVideoBlob = await assetStorage.getAssetBlob(currentModule.exerciseId, 'video');
+      localThumbnailBlob = await assetStorage.getAssetBlob(currentModule.exerciseId, 'thumbnail');
       lastSyncedModuleId.current = currentModule.id;
     }
 
@@ -73,8 +76,9 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
             currentModuleIndex,
             timeLeft,
             isPaused,
-            exercise, // Send full metadata so remote doesn't need local storage
-            localVideoBlob
+            exercise, // Send full metadata so remote doesn't need local storage lookup
+            localVideoBlob,
+            localThumbnailBlob
           }
         });
       }
