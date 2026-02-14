@@ -117,6 +117,13 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [timeLeft, isPaused, currentModuleIndex, workout?.modules?.length, isInitialLoading]);
 
+  const formatTimeDisplay = (totalSeconds: number) => {
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    if (m === 0) return s;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
   if (isInitialLoading) return (
     <div className="fixed inset-0 bg-[#1A1A1A] flex flex-col items-center justify-center text-white">
       <div className="w-10 h-10 border-4 border-[#E1523D] border-t-transparent rounded-full animate-spin mb-4" />
@@ -136,7 +143,6 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-[#1A1A1A] flex flex-col text-white overflow-hidden select-none z-[100]">
-      {/* Reorganized Header with Exit Button on Left */}
       <div className="h-20 shrink-0 px-6 flex items-center border-b border-white/5 bg-black/40 backdrop-blur-md">
         <button 
           onClick={onClose} 
@@ -153,7 +159,6 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
           <p className="font-bold text-sm truncate uppercase tracking-tighter italic">{workout.name}</p>
         </div>
 
-        {/* Spacer to keep title centered */}
         <div className="w-12" />
       </div>
 
@@ -194,10 +199,10 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
         )}
 
         <div className="shrink-0 flex flex-col items-center justify-center py-4">
-          <div className="text-[12rem] md:text-[15rem] font-black italic tabular-nums text-white leading-none tracking-tighter drop-shadow-2xl">
-            {timeLeft}
+          <div className={`${timeLeft >= 60 ? 'text-[8rem] md:text-[10rem]' : 'text-[12rem] md:text-[15rem]'} font-black italic tabular-nums text-white leading-none tracking-tighter drop-shadow-2xl`}>
+            {formatTimeDisplay(timeLeft)}
           </div>
-          <p className="text-[#E1523D] font-black uppercase tracking-[0.5em] -mt-6 text-[11px]">Seconds Remaining</p>
+          <p className="text-[#E1523D] font-black uppercase tracking-[0.5em] -mt-6 text-[11px]">Time Remaining</p>
         </div>
       </div>
 
