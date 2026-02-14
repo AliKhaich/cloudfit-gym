@@ -11,7 +11,8 @@ export const TVView: React.FC = () => {
     currentModuleIndex: number; 
     timeLeft: number; 
     isPaused: boolean;
-    localVideoBlob?: Blob;
+    exercise?: Exercise | null;
+    localVideoBlob?: Blob | null;
   } | null>(null);
   
   const [peerId, setPeerId] = useState<string>('');
@@ -53,25 +54,29 @@ export const TVView: React.FC = () => {
 
   useEffect(() => {
     if (!syncData || !peerId) return;
-    const { workout, currentModuleIndex, timeLeft, localVideoBlob } = syncData;
+    const { workout, currentModuleIndex, timeLeft, localVideoBlob, exercise } = syncData;
     const currentPhoneModule = workout.modules[currentModuleIndex];
 
     if (currentPhoneModule && currentPhoneModule.displayId === peerId) {
+      // Sync local timer
+      if (Math.abs(localTimeLeft - timeLeft) > 2) setLocalTimeLeft(timeLeft);
+
       if (activeModuleId !== currentPhoneModule.id) {
         setActiveModuleId(currentPhoneModule.id);
         setLocalTimeLeft(timeLeft);
         
+        // Handle Video: Use the provided Blob if available, otherwise check local asset DB
         if (localVideoBlob instanceof Blob) {
           if (localVideoUrl) URL.revokeObjectURL(localVideoUrl);
           setLocalVideoUrl(URL.createObjectURL(localVideoBlob));
         } else {
-          assetStorage.getAsset(currentPhoneModule.exerciseId, 'video').then(url => setLocalVideoUrl(url));
+          assetStorage.getAsset(currentPhoneModule.exerciseId, 'video').then(url => {
+            if (url) setLocalVideoUrl(url);
+          });
         }
-      } else {
-        if (Math.abs(localTimeLeft - timeLeft) > 2) setLocalTimeLeft(timeLeft);
       }
     }
-  }, [syncData?.currentModuleIndex, syncData?.workout.id, peerId, syncData?.timeLeft]);
+  }, [syncData?.currentModuleIndex, syncData?.workout.id, peerId, syncData?.timeLeft, syncData?.localVideoBlob]);
 
   const formatTimeDisplay = (totalSeconds: number) => {
     const m = Math.floor(totalSeconds / 60);
@@ -94,19 +99,20 @@ export const TVView: React.FC = () => {
     </div>
   );
 
-  const { workout, currentModuleIndex, isPaused } = syncData;
+  const { workout, currentModuleIndex, isPaused, exercise: syncedExercise } = syncData;
   const myModule = workout.modules.find(m => m.id === activeModuleId);
-  const allAvailableExercises = [...MOCK_EXERCISES, ...storage.getCustomExercises()];
-  const exerciseBase = myModule ? allAvailableExercises.find(ex => ex.id === myModule.exerciseId) : null;
   
-  if (!exerciseBase || !myModule) return (
+  // Use the exercise from sync data if available (fixes custom exercise issues), 
+  // otherwise fallback to a local lookup for project assets.
+  const exercise = syncedExercise || (myModule ? [...MOCK_EXERCISES, ...storage.getCustomExercises()].find(ex => ex.id === myModule.exerciseId) : null);
+  
+  if (!exercise || !myModule) return (
     <div className="h-screen w-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white text-center p-12 overflow-hidden">
        <h2 className="text-4xl font-black uppercase italic mb-4 opacity-20">No Assignment</h2>
+       <p className="text-[10px] font-black uppercase tracking-widest text-gray-600">Waiting for exercise metadata from host...</p>
     </div>
   );
 
-  const overrides = JSON.parse(localStorage.getItem('cf_exercise_overrides') || '{}');
-  const exercise = overrides[exerciseBase.id] || exerciseBase;
   const isCurrentlyInSync = workout.modules.findIndex(m => m.id === activeModuleId) === currentModuleIndex;
 
   return (
@@ -114,7 +120,7 @@ export const TVView: React.FC = () => {
       <div className="flex-1 relative z-10 flex flex-col items-center justify-center py-2 px-8 overflow-hidden">
         <div className="w-full max-w-4xl max-h-[40vh] aspect-video bg-black rounded-[24px] overflow-hidden border border-white/5 shadow-2xl relative flex-shrink">
            {(localVideoUrl || exercise.videoUrl) ? (
-             <video key={`demo-${exercise.id}`} src={localVideoUrl || exercise.videoUrl} autoPlay loop muted className="w-full h-full object-contain" />
+             <video key={`demo-${exercise.id}-${localVideoUrl ? 'blob' : 'url'}`} src={localVideoUrl || exercise.videoUrl} autoPlay loop muted className="w-full h-full object-contain" />
            ) : (
              <img src={exercise.thumbnail} className="w-full h-full object-contain" alt={exercise.name} />
            )}
