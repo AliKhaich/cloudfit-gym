@@ -24,6 +24,7 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
   const timerRef = useRef<number | null>(null);
   const peerRef = useRef<any>(null);
   const connectionsRef = useRef<Map<string, any>>(new Map());
+  const lastSyncedModuleId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!workout?.modules) return;
@@ -40,7 +41,7 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
         const conn = peer.connect(id);
         conn.on('open', () => {
           connectionsRef.current.set(id, conn);
-          syncToAll();
+          syncToAll(true); // Force full sync on new connection
         });
       });
     });
@@ -53,10 +54,14 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
     };
   }, [workout]);
 
-  const syncToAll = async () => {
+  const syncToAll = async (forceVideoSync = false) => {
+    if (!currentModule) return;
+
     let localVideoBlob: Blob | null = null;
-    if (currentModule) {
+    // Only send the heavy video blob if the module has changed or we force it
+    if (forceVideoSync || currentModule.id !== lastSyncedModuleId.current) {
       localVideoBlob = await assetStorage.getAssetBlob(currentModule.exerciseId, 'video');
+      lastSyncedModuleId.current = currentModule.id;
     }
 
     connectionsRef.current.forEach((conn) => {
@@ -68,6 +73,7 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
             currentModuleIndex,
             timeLeft,
             isPaused,
+            exercise, // Send full metadata so remote doesn't need local storage
             localVideoBlob
           }
         });
@@ -104,8 +110,11 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
   }, [currentModuleIndex, currentModule]);
 
   useEffect(() => {
-    syncToAll();
-  }, [timeLeft, isPaused, currentModuleIndex, workout]);
+    // Only sync if we have the exercise data loaded
+    if (exercise) {
+      syncToAll();
+    }
+  }, [timeLeft, isPaused, currentModuleIndex, workout, exercise]);
 
   useEffect(() => {
     if (!isPaused && timeLeft > 0) {
