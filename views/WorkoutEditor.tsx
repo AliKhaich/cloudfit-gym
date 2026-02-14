@@ -18,10 +18,12 @@ export const WorkoutEditor: React.FC<EditorProps> = ({ workout, onSave, onCancel
   const [displays, setDisplays] = useState<Display[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
+  const [allAvailableExercises, setAllAvailableExercises] = useState<Exercise[]>([]);
 
   useEffect(() => {
     setDisplays(storage.getDisplays());
     setFolders(storage.getFolders());
+    setAllAvailableExercises([...MOCK_EXERCISES, ...storage.getCustomExercises()]);
   }, []);
 
   const addModule = (exercise: Exercise) => {
@@ -40,6 +42,8 @@ export const WorkoutEditor: React.FC<EditorProps> = ({ workout, onSave, onCancel
 
     setLastAddedId(newModule.id);
     setTimeout(() => setLastAddedId(null), 1000);
+    // Refresh available exercises in case a new one was just created in the library view
+    setAllAvailableExercises([...MOCK_EXERCISES, ...storage.getCustomExercises()]);
   };
 
   const toggleScheduleDay = (day: number) => {
@@ -94,7 +98,7 @@ export const WorkoutEditor: React.FC<EditorProps> = ({ workout, onSave, onCancel
 
   const calculateTotalTime = () => {
     const totalSeconds = editedWorkout.modules.reduce((acc, m) => {
-      const exercise = MOCK_EXERCISES.find(ex => ex.id === m.exerciseId);
+      const exercise = allAvailableExercises.find(ex => ex.id === m.exerciseId);
       return acc + (m.duration ?? exercise?.duration ?? 0);
     }, 0);
     
@@ -116,7 +120,10 @@ export const WorkoutEditor: React.FC<EditorProps> = ({ workout, onSave, onCancel
              <h2 className="text-lg font-bold">Add Exercises</h2>
            </div>
            <button 
-             onClick={() => setShowLibrary(false)}
+             onClick={() => {
+                setShowLibrary(false);
+                setAllAvailableExercises([...MOCK_EXERCISES, ...storage.getCustomExercises()]);
+             }}
              className="bg-[#1A1A1A] text-white px-6 py-2 rounded-full text-xs font-bold uppercase tracking-widest"
            >
              Done ({editedWorkout.modules.length})
@@ -221,7 +228,7 @@ export const WorkoutEditor: React.FC<EditorProps> = ({ workout, onSave, onCancel
 
       <div className="space-y-4">
         {editedWorkout.modules.map((m, idx) => {
-          const exercise = MOCK_EXERCISES.find(ex => ex.id === m.exerciseId);
+          const exercise = allAvailableExercises.find(ex => ex.id === m.exerciseId);
           const isJustAdded = m.id === lastAddedId;
           const currentDuration = m.duration ?? exercise?.duration ?? 0;
           const mPart = Math.floor(currentDuration / 60);
@@ -237,8 +244,8 @@ export const WorkoutEditor: React.FC<EditorProps> = ({ workout, onSave, onCancel
                    {String(idx + 1).padStart(2, '0')}
                  </div>
                  <div className="flex-1">
-                   <h4 className="font-bold text-gray-900 leading-tight">{exercise?.name}</h4>
-                   <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{exercise?.category}</p>
+                   <h4 className="font-bold text-gray-900 leading-tight">{exercise?.name || 'Unknown Exercise'}</h4>
+                   <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{exercise?.category || 'Custom'}</p>
                  </div>
                  <button 
                    onClick={() => removeModule(m.id)} 
