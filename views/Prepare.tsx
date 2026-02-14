@@ -19,10 +19,10 @@ export const Prepare: React.FC<PrepareProps> = ({ workout, onStart, onEdit, onCl
     setDisplays(storage.getDisplays());
   }, []);
 
-  const updateModuleDuration = (moduleId: string, duration: number) => {
+  const updateModuleDuration = (moduleId: string, totalSeconds: number) => {
     setEditedWorkout({
       ...editedWorkout,
-      modules: editedWorkout.modules.map(m => m.id === moduleId ? { ...m, duration: Math.max(5, duration) } : m),
+      modules: editedWorkout.modules.map(m => m.id === moduleId ? { ...m, duration: Math.max(0, totalSeconds) } : m),
       lastModified: Date.now()
     });
   };
@@ -85,6 +85,9 @@ export const Prepare: React.FC<PrepareProps> = ({ workout, onStart, onEdit, onCl
         {hasModules ? editedWorkout.modules.map((m, idx) => {
           const exercise = MOCK_EXERCISES.find(ex => ex.id === m.exerciseId);
           const currentDuration = m.duration ?? exercise?.duration ?? 0;
+          const mPart = Math.floor(currentDuration / 60);
+          const sPart = currentDuration % 60;
+
           return (
             <div key={m.id} className="bg-white/5 p-5 rounded-[32px] border border-white/5 flex flex-col gap-4">
                <div className="flex items-center gap-4">
@@ -96,17 +99,34 @@ export const Prepare: React.FC<PrepareProps> = ({ workout, onStart, onEdit, onCl
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{exercise?.category}</p>
                   </div>
                   
-                  <div className="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-2xl">
-                    <button onClick={() => updateModuleDuration(m.id, currentDuration - 5)} className="text-gray-400 hover:text-white p-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" /></svg>
-                    </button>
-                    <div className="text-center min-w-[32px]">
-                      <span className="text-lg font-black italic">{currentDuration}</span>
-                      <p className="text-[7px] font-black uppercase text-gray-500">SEC</p>
+                  <div className="flex flex-col gap-2">
+                    {/* Minute Adjustment */}
+                    <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-2xl border border-white/5">
+                      <button onClick={() => updateModuleDuration(m.id, currentDuration - 60)} className="text-gray-400 hover:text-white">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" /></svg>
+                      </button>
+                      <div className="text-center min-w-[24px]">
+                        <span className="text-sm font-black italic">{mPart}</span>
+                        <p className="text-[6px] font-black uppercase text-gray-500">MIN</p>
+                      </div>
+                      <button onClick={() => updateModuleDuration(m.id, currentDuration + 60)} className="text-gray-400 hover:text-white">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
+                      </button>
                     </div>
-                    <button onClick={() => updateModuleDuration(m.id, currentDuration + 5)} className="text-gray-400 hover:text-white p-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
-                    </button>
+
+                    {/* Second Adjustment */}
+                    <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-2xl border border-white/5">
+                      <button onClick={() => updateModuleDuration(m.id, currentDuration - 5)} className="text-gray-400 hover:text-white">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" /></svg>
+                      </button>
+                      <div className="text-center min-w-[24px]">
+                        <span className="text-sm font-black italic">{sPart}</span>
+                        <p className="text-[6px] font-black uppercase text-gray-500">SEC</p>
+                      </div>
+                      <button onClick={() => updateModuleDuration(m.id, currentDuration + 5)} className="text-gray-400 hover:text-white">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
+                      </button>
+                    </div>
                   </div>
                </div>
 
