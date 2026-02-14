@@ -70,7 +70,7 @@ export const TEMPLATE_WORKOUTS: Workout[] = [
     id: 't1',
     name: 'Morning Energy',
     modules: [
-      { id: 'm1', exerciseId: '1', displayId: 'local', duration: 60 },
+      { id: 'm1', exerciseId: '1', displayId: 'local', duration: 650 },
       { id: 'm2', exerciseId: '4', displayId: 'local', duration: 60 },
       { id: 'm3', exerciseId: '5', displayId: 'local', duration: 30 }
     ],
