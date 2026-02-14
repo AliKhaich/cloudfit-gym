@@ -26,7 +26,7 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({ workout, onSelect, onD
       {/* Main Clickable Area - Card Content */}
       <div 
         onClick={() => onSelect?.(workout)}
-        className="absolute inset-0 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between hover:border-[#E1523D]/30 transition-all cursor-pointer active:scale-[0.98] z-10"
+        className="absolute inset-0 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between hover:border-[#E1523D]/20 transition-all cursor-pointer active:scale-[0.98] z-10"
       >
         <div>
           <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
@@ -57,21 +57,19 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({ workout, onSelect, onD
         </div>
       </div>
 
-      {/* Independent Delete Button - High Z-Index & Sibling to avoid bubbling */}
+      {/* Modern Minimalistic Delete Button */}
       {onDelete && (
         <button 
           onClick={(e) => {
             e.stopPropagation();
             onDelete(workout.id, e);
           }}
-          className="absolute -top-2 -right-2 w-10 h-10 bg-white rounded-full shadow-lg border border-gray-100 flex items-center justify-center z-50 hover:bg-red-50 transition-all active:scale-90 group/del"
+          className="absolute -top-2 -right-2 w-8 h-8 bg-white border border-gray-100 rounded-full shadow-md flex items-center justify-center z-50 hover:bg-red-50 hover:border-red-100 hover:text-red-500 text-gray-400 transition-all active:scale-90"
           title="Delete Workout"
         >
-          <div className="w-7 h-7 bg-red-500 rounded-full flex items-center justify-center text-white shadow-sm group-hover/del:bg-red-600 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" />
-            </svg>
-          </div>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M20 12H4" />
+          </svg>
         </button>
       )}
     </div>
