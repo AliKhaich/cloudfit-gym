@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MOCK_EXERCISES } from '../constants';
 import { Exercise } from '../types';
 import { assetStorage } from '../services/assetStorage';
@@ -12,7 +12,6 @@ interface LibraryProps {
 export const Library: React.FC<LibraryProps> = ({ onSelectExercise, onGenerateVideo }) => {
   const [search, setSearch] = useState('');
   const [activeCat, setActiveCat] = useState('All');
-  const [animatingId, setAnimatingId] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<string, Exercise>>({});
   const [localAssets, setLocalAssets] = useState<Record<string, { thumb?: string; video?: string }>>({});
   const [editingMediaId, setEditingMediaId] = useState<string | null>(null);
@@ -60,7 +59,7 @@ export const Library: React.FC<LibraryProps> = ({ onSelectExercise, onGenerateVi
         <div className="flex-1 relative">
           <input 
             type="text" 
-            placeholder="Search exercises..." 
+            placeholder="Search local library..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-11 pr-4 py-4 bg-white rounded-2xl border border-gray-100 focus:outline-none focus:ring-2 focus:ring-[#E1523D]/10 focus:border-[#E1523D] shadow-sm font-medium transition-all"
@@ -95,11 +94,14 @@ export const Library: React.FC<LibraryProps> = ({ onSelectExercise, onGenerateVi
                 <div className="relative cursor-pointer group/img shrink-0" onClick={() => onSelectExercise?.(ex)}>
                   <img 
                     src={hasLocalThumb || ex.thumbnail} 
-                    className="w-24 h-24 object-cover rounded-[24px] border border-gray-50" 
+                    className="w-24 h-24 object-cover rounded-[24px] border border-gray-50 bg-gray-50" 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/error/400/225';
+                    }}
                     alt={ex.name} 
                   />
                   {hasLocalThumb && (
-                    <div className="absolute top-1 right-1 bg-green-500 text-white p-1 rounded-full shadow-lg">
+                    <div className="absolute top-1 right-1 bg-blue-500 text-white p-1 rounded-full shadow-lg">
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" /></svg>
                     </div>
                   )}
@@ -109,11 +111,12 @@ export const Library: React.FC<LibraryProps> = ({ onSelectExercise, onGenerateVi
                   <span className="text-[9px] font-black text-[#E1523D] uppercase tracking-widest mb-0.5 block">{ex.category}</span>
                   <h4 className="text-base font-extrabold text-gray-900 group-hover:text-[#E1523D] transition-colors truncate">{ex.name}</h4>
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {hasLocalVideo && (
-                      <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter">Local Animation</span>
-                    )}
-                    {ex.videoUrl && !hasLocalVideo && (
-                      <span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter">AI Video</span>
+                    {hasLocalVideo || ex.videoUrl ? (
+                      <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter">
+                        {hasLocalVideo ? 'Live Override' : 'Project Asset'}
+                      </span>
+                    ) : (
+                      <span className="bg-gray-50 text-gray-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter">No Video</span>
                     )}
                   </div>
                 </div>
@@ -129,24 +132,25 @@ export const Library: React.FC<LibraryProps> = ({ onSelectExercise, onGenerateVi
 
               {editingMediaId === ex.id && (
                 <div className="p-6 bg-gray-50 border-t border-gray-100 animate-in slide-in-from-top duration-300">
-                  <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4">Update Local Assets (PNG/MP4)</h5>
+                  <h5 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Manage Exercise Media</h5>
+                  <p className="text-[9px] text-gray-400 mb-4 italic">Overrides current project assets for this session.</p>
                   <div className="grid grid-cols-2 gap-4">
                     <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-[#E1523D] hover:bg-white transition-all">
                       <svg className="w-6 h-6 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                      <span className="text-[9px] font-black uppercase text-gray-400">Upload PNG</span>
+                      <span className="text-[9px] font-black uppercase text-gray-400">Override PNG</span>
                       <input type="file" accept="image/png" className="hidden" onChange={(e) => e.target.files?.[0] && handleFileUpload(ex.id, 'thumbnail', e.target.files[0])} />
                     </label>
                     <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-[#E1523D] hover:bg-white transition-all">
                       <svg className="w-6 h-6 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                      <span className="text-[9px] font-black uppercase text-gray-400">Upload MP4</span>
+                      <span className="text-[9px] font-black uppercase text-gray-400">Override MP4</span>
                       <input type="file" accept="video/mp4" className="hidden" onChange={(e) => e.target.files?.[0] && handleFileUpload(ex.id, 'video', e.target.files[0])} />
                     </label>
                   </div>
-                  {hasLocalVideo && (
-                    <div className="mt-4 aspect-video bg-black rounded-xl overflow-hidden relative">
-                       <video src={hasLocalVideo} autoPlay loop muted className="w-full h-full object-cover opacity-50" />
-                       <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-white">Previewing Local Video</span>
+                  {(hasLocalVideo || ex.videoUrl) && (
+                    <div className="mt-4 aspect-video bg-black rounded-xl overflow-hidden relative border border-white/5">
+                       <video key={hasLocalVideo || ex.videoUrl} src={hasLocalVideo || ex.videoUrl} autoPlay loop muted className="w-full h-full object-cover opacity-60" />
+                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-white shadow-xl">Media Preview</span>
                        </div>
                     </div>
                   )}
