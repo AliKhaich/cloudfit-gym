@@ -13,12 +13,14 @@ export const TVView: React.FC = () => {
     isPaused: boolean;
     exercise?: Exercise | null;
     localVideoBlob?: Blob | null;
+    localThumbnailBlob?: Blob | null;
   } | null>(null);
   
   const [peerId, setPeerId] = useState<string>('');
   const [localTimeLeft, setLocalTimeLeft] = useState<number>(0);
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
   const [localVideoUrl, setLocalVideoUrl] = useState<string | null>(null);
+  const [localThumbnailUrl, setLocalThumbnailUrl] = useState<string | null>(null);
   const peerRef = useRef<any>(null);
 
   useEffect(() => {
@@ -36,6 +38,7 @@ export const TVView: React.FC = () => {
           setActiveModuleId(null);
           setLocalTimeLeft(0);
           setLocalVideoUrl(null);
+          setLocalThumbnailUrl(null);
         }
       });
     });
@@ -54,29 +57,43 @@ export const TVView: React.FC = () => {
 
   useEffect(() => {
     if (!syncData || !peerId) return;
-    const { workout, currentModuleIndex, timeLeft, localVideoBlob, exercise } = syncData;
+    const { workout, currentModuleIndex, timeLeft, localVideoBlob, localThumbnailBlob, exercise } = syncData;
     const currentPhoneModule = workout.modules[currentModuleIndex];
 
     if (currentPhoneModule && currentPhoneModule.displayId === peerId) {
-      // Sync local timer
+      // Sync local timer if it drifts
       if (Math.abs(localTimeLeft - timeLeft) > 2) setLocalTimeLeft(timeLeft);
 
       if (activeModuleId !== currentPhoneModule.id) {
         setActiveModuleId(currentPhoneModule.id);
         setLocalTimeLeft(timeLeft);
         
-        // Handle Video: Use the provided Blob if available, otherwise check local asset DB
+        // Handle Video: Use the provided Blob if available (custom exercises)
         if (localVideoBlob instanceof Blob) {
           if (localVideoUrl) URL.revokeObjectURL(localVideoUrl);
           setLocalVideoUrl(URL.createObjectURL(localVideoBlob));
         } else {
+          // Clear current local video if no blob sent and it's a new module
+          setLocalVideoUrl(null);
+          // Fallback to local IndexedDB check (for previously saved assets on this device)
           assetStorage.getAsset(currentPhoneModule.exerciseId, 'video').then(url => {
             if (url) setLocalVideoUrl(url);
           });
         }
+
+        // Handle Thumbnail: Use the provided Blob if available (custom exercises)
+        if (localThumbnailBlob instanceof Blob) {
+          if (localThumbnailUrl) URL.revokeObjectURL(localThumbnailUrl);
+          setLocalThumbnailUrl(URL.createObjectURL(localThumbnailBlob));
+        } else {
+          setLocalThumbnailUrl(null);
+          assetStorage.getAsset(currentPhoneModule.exerciseId, 'thumbnail').then(url => {
+            if (url) setLocalThumbnailUrl(url);
+          });
+        }
       }
     }
-  }, [syncData?.currentModuleIndex, syncData?.workout.id, peerId, syncData?.timeLeft, syncData?.localVideoBlob]);
+  }, [syncData?.currentModuleIndex, syncData?.workout.id, peerId, syncData?.timeLeft, syncData?.localVideoBlob, syncData?.localThumbnailBlob]);
 
   const formatTimeDisplay = (totalSeconds: number) => {
     const m = Math.floor(totalSeconds / 60);
@@ -102,8 +119,7 @@ export const TVView: React.FC = () => {
   const { workout, currentModuleIndex, isPaused, exercise: syncedExercise } = syncData;
   const myModule = workout.modules.find(m => m.id === activeModuleId);
   
-  // Use the exercise from sync data if available (fixes custom exercise issues), 
-  // otherwise fallback to a local lookup for project assets.
+  // Use synced metadata if available
   const exercise = syncedExercise || (myModule ? [...MOCK_EXERCISES, ...storage.getCustomExercises()].find(ex => ex.id === myModule.exerciseId) : null);
   
   if (!exercise || !myModule) return (
@@ -120,9 +136,21 @@ export const TVView: React.FC = () => {
       <div className="flex-1 relative z-10 flex flex-col items-center justify-center py-2 px-8 overflow-hidden">
         <div className="w-full max-w-4xl max-h-[40vh] aspect-video bg-black rounded-[24px] overflow-hidden border border-white/5 shadow-2xl relative flex-shrink">
            {(localVideoUrl || exercise.videoUrl) ? (
-             <video key={`demo-${exercise.id}-${localVideoUrl ? 'blob' : 'url'}`} src={localVideoUrl || exercise.videoUrl} autoPlay loop muted className="w-full h-full object-contain" />
+             <video 
+               key={`demo-${exercise.id}-${localVideoUrl ? 'sync' : 'remote'}`} 
+               src={localVideoUrl || exercise.videoUrl} 
+               autoPlay 
+               loop 
+               muted 
+               className="w-full h-full object-contain" 
+             />
            ) : (
-             <img src={exercise.thumbnail} className="w-full h-full object-contain" alt={exercise.name} />
+             <img 
+               key={`thumb-${exercise.id}`}
+               src={localThumbnailUrl || exercise.thumbnail} 
+               className="w-full h-full object-contain" 
+               alt={exercise.name} 
+             />
            )}
         </div>
 
