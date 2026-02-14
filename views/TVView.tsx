@@ -104,24 +104,17 @@ export const TVView: React.FC = () => {
 
   return (
     <div className="h-screen w-screen bg-black flex flex-col text-white overflow-hidden select-none relative">
-      <div className="absolute inset-0 z-0">
-        {(localVideoUrl || exercise.videoUrl) ? (
-          <video key={exercise.id} src={localVideoUrl || exercise.videoUrl} autoPlay loop muted className="w-full h-full object-cover opacity-20 blur-3xl" />
-        ) : (
-          <img src={exercise.thumbnail} className="w-full h-full object-cover opacity-10 blur-2xl" alt="" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/10 to-black/90" />
-      </div>
-
+      {/* Background Atmosphere Completely Removed to prevent color tinting */}
+      
       <div className="flex-1 relative z-10 flex flex-col items-center justify-center py-2 px-8 overflow-hidden">
         {/* TOP: Video Demonstration Area */}
-        <div className="w-full max-w-4xl max-h-[40vh] aspect-video bg-[#0A0A0A] rounded-[24px] overflow-hidden border border-white/5 shadow-2xl relative flex-shrink">
+        <div className="w-full max-w-4xl max-h-[40vh] aspect-video bg-black rounded-[24px] overflow-hidden border border-white/5 shadow-2xl relative flex-shrink">
            {(localVideoUrl || exercise.videoUrl) ? (
              <video key={`demo-${exercise.id}`} src={localVideoUrl || exercise.videoUrl} autoPlay loop muted className="w-full h-full object-contain" />
            ) : (
              <img src={exercise.thumbnail} className="w-full h-full object-contain" alt={exercise.name} />
            )}
-           {/* Permanently removed the blue/dimming overlay layer for inactive stations */}
+           {/* All overlays permanently removed */}
         </div>
 
         {/* BOTTOM OFFSET: Content Area */}
@@ -131,9 +124,9 @@ export const TVView: React.FC = () => {
             <p className="text-[0.8vw] lg:text-sm text-[#E1523D] font-black uppercase tracking-[0.3em] drop-shadow-md opacity-80 mb-1">{exercise.category}</p>
           </div>
 
-          {/* Timer Area - Simplified */}
+          {/* Timer Area - Simple white text */}
           <div className="relative inline-block flex-shrink">
-            <div className={`text-[4vw] lg:text-[4.5rem] leading-none font-black italic tabular-nums drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-300 ${isPaused && isCurrentlyInSync ? 'opacity-10 scale-90' : 'text-white'}`}>
+            <div className={`text-[4vw] lg:text-[4.5rem] leading-none font-black italic tabular-nums drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-300 ${isPaused && isCurrentlyInSync ? 'opacity-20 scale-90' : 'text-white'}`}>
               {localTimeLeft}
             </div>
             {isPaused && isCurrentlyInSync && (
@@ -146,7 +139,7 @@ export const TVView: React.FC = () => {
       </div>
       
       {/* Footer Progress Bar */}
-      <div className="h-12 bg-[#0A0A0A]/95 backdrop-blur-3xl relative shrink-0 border-t border-white/5 z-20">
+      <div className="h-12 bg-[#0A0A0A] relative shrink-0 border-t border-white/5 z-20">
         <div className="h-full bg-[#E1523D] transition-all duration-1000 ease-linear shadow-[0_0_30px_rgba(225,82,61,0.3)]" style={{ width: `${((currentModuleIndex + 1) / workout.modules.length) * 100}%` }} />
         <div className="absolute inset-0 flex items-center justify-between px-10 pointer-events-none">
           <span className="text-xs font-black uppercase italic tracking-widest text-white/30 truncate max-w-[120px]">{workout.name}</span>
