@@ -57,18 +57,19 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({ workout, onSelect, onD
         </div>
       </div>
 
-      {/* Modern Minimalistic Delete Button */}
+      {/* Modern Minimalistic Delete Button - High Z-Index for Phone reliability */}
       {onDelete && (
         <button 
           onClick={(e) => {
+            e.preventDefault();
             e.stopPropagation();
             onDelete(workout.id, e);
           }}
-          className="absolute -top-2 -right-2 w-8 h-8 bg-white border border-gray-100 rounded-full shadow-md flex items-center justify-center z-50 hover:bg-red-50 hover:border-red-100 hover:text-red-500 text-gray-400 transition-all active:scale-90"
+          className="absolute -top-1 -right-1 w-9 h-9 bg-white border border-gray-100 rounded-full shadow-lg flex items-center justify-center z-[60] hover:bg-red-50 hover:border-red-100 hover:text-red-500 text-gray-400 transition-all active:scale-90"
           title="Delete Workout"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M20 12H4" />
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
           </svg>
         </button>
       )}
