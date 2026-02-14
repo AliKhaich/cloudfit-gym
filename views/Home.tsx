@@ -74,22 +74,21 @@ export const Home: React.FC<HomeProps> = ({ onSelectWorkout, onNavigate }) => {
 
   const handleDeleteWorkout = (id: string) => {
     if (window.confirm('Delete this workout permanently?')) {
-      // 1. Update workouts state immediately
-      setWorkouts(prev => {
-        const updated = prev.filter(w => w.id !== id);
-        storage.setWorkouts(updated); // Sync storage inside update for consistency
-        return updated;
-      });
+      // Clear the active folder filter if it's the workout being deleted (optional UX)
+      // 1. Update workouts
+      const allWorkouts = storage.getWorkouts();
+      const updatedWorkouts = allWorkouts.filter(w => w.id !== id);
+      storage.setWorkouts(updatedWorkouts);
+      setWorkouts(updatedWorkouts);
       
-      // 2. Clean up folder references
-      setFolders(prevFolders => {
-        const updatedFolders = prevFolders.map(f => ({
-          ...f,
-          workoutIds: f.workoutIds.filter(wid => wid !== id)
-        }));
-        storage.setFolders(updatedFolders);
-        return updatedFolders;
-      });
+      // 2. Update folders
+      const allFolders = storage.getFolders();
+      const updatedFolders = allFolders.map(f => ({
+        ...f,
+        workoutIds: f.workoutIds.filter(wid => wid !== id)
+      }));
+      storage.setFolders(updatedFolders);
+      setFolders(updatedFolders);
     }
   };
 
@@ -195,7 +194,7 @@ export const Home: React.FC<HomeProps> = ({ onSelectWorkout, onNavigate }) => {
             key={w.id} 
             workout={w} 
             onSelect={onSelectWorkout}
-            onDelete={() => handleDeleteWorkout(w.id)} 
+            onDelete={(id) => handleDeleteWorkout(id)} 
           />
         )) : (
           <div className="w-full text-center py-8 text-gray-400 text-sm">No workouts in this section.</div>
