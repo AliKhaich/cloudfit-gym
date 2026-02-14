@@ -10,6 +10,12 @@ interface PlayerProps {
   onClose: () => void;
 }
 
+interface MediaMapEntry {
+  exercise: Exercise;
+  videoBlob: Blob | null;
+  thumbnailBlob: Blob | null;
+}
+
 export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
   const [currentModuleIndex, setCurrentModuleIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -17,6 +23,7 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [localVideoUrl, setLocalVideoUrl] = useState<string | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [mediaMap, setMediaMap] = useState<Record<string, MediaMapEntry>>({});
   
   const currentModule = workout?.modules?.[currentModuleIndex];
   const isLocal = currentModule?.displayId === LOCAL_DISPLAY_ID;
@@ -24,7 +31,7 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
   const timerRef = useRef<number | null>(null);
   const peerRef = useRef<any>(null);
   const connectionsRef = useRef<Map<string, any>>(new Map());
-  const lastSyncedModuleId = useRef<string | null>(null);
+  const lastWorkoutId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!workout?.modules) return;
@@ -41,7 +48,7 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
         const conn = peer.connect(id);
         conn.on('open', () => {
           connectionsRef.current.set(id, conn);
-          syncToAll(true); // Force full sync on new connection
+          syncToAll(true); 
         });
       });
     });
@@ -54,18 +61,41 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
     };
   }, [workout]);
 
-  const syncToAll = async (forceFullSync = false) => {
-    if (!currentModule || !exercise) return;
+  // Pre-load all media for the entire workout to support multi-display
+  useEffect(() => {
+    const loadAllMedia = async () => {
+      if (!workout?.modules || workout.id === lastWorkoutId.current) return;
+      
+      const newMediaMap: Record<string, MediaMapEntry> = {};
+      const allAvailableExercises = [...MOCK_EXERCISES, ...storage.getCustomExercises()];
+      const overrides = JSON.parse(localStorage.getItem('cf_exercise_overrides') || '{}');
 
-    let localVideoBlob: Blob | null = null;
-    let localThumbnailBlob: Blob | null = null;
+      const uniqueExerciseIds = Array.from(new Set(workout.modules.map(m => m.exerciseId)));
+      
+      for (const exId of uniqueExerciseIds) {
+        const baseEx = allAvailableExercises.find(ex => ex.id === exId);
+        if (baseEx) {
+          const finalEx = overrides[baseEx.id] || baseEx;
+          const vBlob = await assetStorage.getAssetBlob(exId, 'video');
+          const tBlob = await assetStorage.getAssetBlob(exId, 'thumbnail');
+          
+          newMediaMap[exId] = {
+            exercise: finalEx,
+            videoBlob: vBlob,
+            thumbnailBlob: tBlob
+          };
+        }
+      }
+      
+      setMediaMap(newMediaMap);
+      lastWorkoutId.current = workout.id;
+    };
     
-    // Only send the heavy blobs if the module has changed or we force it
-    if (forceFullSync || currentModule.id !== lastSyncedModuleId.current) {
-      localVideoBlob = await assetStorage.getAssetBlob(currentModule.exerciseId, 'video');
-      localThumbnailBlob = await assetStorage.getAssetBlob(currentModule.exerciseId, 'thumbnail');
-      lastSyncedModuleId.current = currentModule.id;
-    }
+    loadAllMedia();
+  }, [workout]);
+
+  const syncToAll = async (forceFullSync = false) => {
+    if (!workout) return;
 
     connectionsRef.current.forEach((conn) => {
       if (conn && conn.open) {
@@ -76,9 +106,8 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
             currentModuleIndex,
             timeLeft,
             isPaused,
-            exercise, // Send full metadata so remote doesn't need local storage lookup
-            localVideoBlob,
-            localThumbnailBlob
+            // Send the entire map so every TV can find its specific exercise
+            mediaMap: forceFullSync || Object.keys(mediaMap).length > 0 ? mediaMap : null 
           }
         });
       }
@@ -86,39 +115,34 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
   };
 
   useEffect(() => {
-    const loadExercise = async () => {
+    const loadLocalExercise = async () => {
       if (currentModule) {
-        const allAvailableExercises = [...MOCK_EXERCISES, ...storage.getCustomExercises()];
-        const baseEx = allAvailableExercises.find(ex => ex.id === currentModule.exerciseId);
-        
-        if (baseEx) {
-          const overrides = JSON.parse(localStorage.getItem('cf_exercise_overrides') || '{}');
-          const finalEx = overrides[baseEx.id] || baseEx;
-          setExercise(finalEx);
-
-          const localUrl = await assetStorage.getAsset(finalEx.id, 'video');
+        const entry = mediaMap[currentModule.exerciseId];
+        if (entry) {
+          setExercise(entry.exercise);
+          const localUrl = await assetStorage.getAsset(entry.exercise.id, 'video');
           setLocalVideoUrl(localUrl);
-          
-          const moduleDuration = currentModule.duration ?? finalEx.duration ?? 0;
+          const moduleDuration = currentModule.duration ?? entry.exercise.duration ?? 0;
           setTimeLeft(moduleDuration);
         } else {
-          setExercise(null);
+          // Fallback if map not ready
+          const allEx = [...MOCK_EXERCISES, ...storage.getCustomExercises()];
+          const ex = allEx.find(e => e.id === currentModule.exerciseId);
+          if (ex) {
+            setExercise(ex);
+            const moduleDuration = currentModule.duration ?? ex.duration ?? 0;
+            setTimeLeft(moduleDuration);
+          }
         }
-        setIsInitialLoading(false);
-      } else {
-        setExercise(null);
         setIsInitialLoading(false);
       }
     };
-    loadExercise();
-  }, [currentModuleIndex, currentModule]);
+    loadLocalExercise();
+  }, [currentModuleIndex, currentModule, mediaMap]);
 
   useEffect(() => {
-    // Only sync if we have the exercise data loaded
-    if (exercise) {
-      syncToAll();
-    }
-  }, [timeLeft, isPaused, currentModuleIndex, workout, exercise]);
+    syncToAll();
+  }, [timeLeft, isPaused, currentModuleIndex, workout, mediaMap]);
 
   useEffect(() => {
     if (!isPaused && timeLeft > 0) {
@@ -165,7 +189,6 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
         <button 
           onClick={onClose} 
           className="w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all active:scale-90"
-          aria-label="Exit Workout"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
@@ -173,7 +196,7 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
         </button>
         
         <div className="flex-1 text-center px-4">
-          <h3 className="text-[10px] font-black text-[#E1523D] uppercase tracking-[0.3em] leading-none mb-1">Playing</h3>
+          <h3 className="text-[10px] font-black text-[#E1523D] uppercase tracking-[0.3em] leading-none mb-1">Workout Active</h3>
           <p className="font-bold text-sm truncate uppercase tracking-tighter italic">{workout.name}</p>
         </div>
 
@@ -185,14 +208,7 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
           <div className="w-full flex flex-col items-center justify-center flex-1">
             <div className="relative w-full max-w-sm aspect-video rounded-[32px] overflow-hidden shadow-2xl bg-black border border-white/10 max-h-[35vh]">
               {(localVideoUrl || exercise.videoUrl) ? (
-                <video 
-                  src={localVideoUrl || exercise.videoUrl} 
-                  autoPlay 
-                  loop 
-                  muted 
-                  playsInline 
-                  className="w-full h-full object-cover" 
-                />
+                <video src={localVideoUrl || exercise.videoUrl} autoPlay loop muted playsInline className="w-full h-full object-cover" />
               ) : (
                 <img src={exercise.thumbnail} className="w-full h-full object-cover opacity-80" alt={exercise.name} />
               )}
@@ -210,8 +226,8 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
                 </svg>
             </div>
             <div className="text-center">
-              <h2 className="text-xl font-black uppercase italic tracking-widest text-white/90">Casting Stream</h2>
-              <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-2">{exercise.name} playing on Remote Display</p>
+              <h2 className="text-xl font-black uppercase italic tracking-widest text-white/90">Station Cast</h2>
+              <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-2">Display {currentModule.displayId} is active</p>
             </div>
           </div>
         )}
@@ -220,42 +236,22 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
           <div className={`${timeLeft >= 60 ? 'text-[8rem] md:text-[10rem]' : 'text-[12rem] md:text-[15rem]'} font-black italic tabular-nums text-white leading-none tracking-tighter drop-shadow-2xl`}>
             {formatTimeDisplay(timeLeft)}
           </div>
-          <p className="text-[#E1523D] font-black uppercase tracking-[0.5em] -mt-6 text-[11px]">Time Remaining</p>
         </div>
       </div>
 
       <div className="h-32 flex justify-center items-center gap-10 bg-black/60 backdrop-blur-2xl border-t border-white/5 pb-safe">
-        <button 
-          disabled={currentModuleIndex === 0} 
-          onClick={() => setCurrentModuleIndex(prev => prev - 1)} 
-          className="w-16 h-16 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center disabled:opacity-5 transition-all active:scale-90"
-        >
-          <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z" />
-          </svg>
+        <button disabled={currentModuleIndex === 0} onClick={() => setCurrentModuleIndex(prev => prev - 1)} className="w-16 h-16 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center disabled:opacity-5 transition-all active:scale-90">
+          <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z" /></svg>
         </button>
-        <button 
-          onClick={() => setIsPaused(!isPaused)} 
-          className="w-24 h-24 bg-[#E1523D] rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(225,82,61,0.4)] active:scale-95 transition-all"
-        >
+        <button onClick={() => setIsPaused(!isPaused)} className="w-24 h-24 bg-[#E1523D] rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(225,82,61,0.4)] active:scale-95 transition-all">
           {isPaused ? (
-            <svg className="w-12 h-12 ml-1" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M4.018 14L14.41 8.41a.89.89 0 000-1.58L4.02 1.25a.89.89 0 00-1.33.79V13.2a.89.89 0 001.33.8z" />
-            </svg>
+            <svg className="w-12 h-12 ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M4.018 14L14.41 8.41a.89.89 0 000-1.58L4.02 1.25a.89.89 0 00-1.33.79V13.2a.89.89 0 001.33.8z" /></svg>
           ) : (
-            <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M5 4h3v12H5V4zm7 0h3v12h-3V4z" />
-            </svg>
+            <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4h3v12H5V4zm7 0h3v12h-3V4z" /></svg>
           )}
         </button>
-        <button 
-          disabled={currentModuleIndex === workout.modules.length - 1} 
-          onClick={() => setCurrentModuleIndex(prev => prev + 1)} 
-          className="w-16 h-16 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center disabled:opacity-5 transition-all active:scale-90"
-        >
-          <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798L4.555 5.168z" />
-          </svg>
+        <button disabled={currentModuleIndex === workout.modules.length - 1} onClick={() => setCurrentModuleIndex(prev => prev + 1)} className="w-16 h-16 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center disabled:opacity-5 transition-all active:scale-90">
+          <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798L4.555 5.168z" /></svg>
         </button>
       </div>
     </div>
