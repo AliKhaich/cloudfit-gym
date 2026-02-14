@@ -14,9 +14,11 @@ interface PrepareProps {
 export const Prepare: React.FC<PrepareProps> = ({ workout, onStart, onEdit, onClose }) => {
   const [editedWorkout, setEditedWorkout] = useState<Workout>({ ...workout });
   const [displays, setDisplays] = useState<Display[]>([]);
+  const [allAvailableExercises, setAllAvailableExercises] = useState<Exercise[]>([]);
 
   useEffect(() => {
     setDisplays(storage.getDisplays());
+    setAllAvailableExercises([...MOCK_EXERCISES, ...storage.getCustomExercises()]);
   }, []);
 
   const updateModuleDuration = (moduleId: string, totalSeconds: number) => {
@@ -37,7 +39,7 @@ export const Prepare: React.FC<PrepareProps> = ({ workout, onStart, onEdit, onCl
 
   const calculateTotalTime = () => {
     const totalSeconds = editedWorkout.modules.reduce((acc, m) => {
-      const exercise = MOCK_EXERCISES.find(ex => ex.id === m.exerciseId);
+      const exercise = allAvailableExercises.find(ex => ex.id === m.exerciseId);
       return acc + (m.duration ?? exercise?.duration ?? 0);
     }, 0);
     
@@ -83,7 +85,7 @@ export const Prepare: React.FC<PrepareProps> = ({ workout, onStart, onEdit, onCl
         </div>
 
         {hasModules ? editedWorkout.modules.map((m, idx) => {
-          const exercise = MOCK_EXERCISES.find(ex => ex.id === m.exerciseId);
+          const exercise = allAvailableExercises.find(ex => ex.id === m.exerciseId);
           const currentDuration = m.duration ?? exercise?.duration ?? 0;
           const mPart = Math.floor(currentDuration / 60);
           const sPart = currentDuration % 60;
@@ -95,8 +97,8 @@ export const Prepare: React.FC<PrepareProps> = ({ workout, onStart, onEdit, onCl
                     {idx + 1}
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-sm leading-tight">{exercise?.name}</h4>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{exercise?.category}</p>
+                    <h4 className="font-bold text-sm leading-tight">{exercise?.name || 'Unknown Exercise'}</h4>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{exercise?.category || 'Custom'}</p>
                   </div>
                   
                   <div className="flex flex-col gap-2">
