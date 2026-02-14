@@ -155,10 +155,7 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
               {(localVideoUrl || exercise.videoUrl) ? (
                 <video src={localVideoUrl || exercise.videoUrl} autoPlay loop muted playsInline className="w-full h-full object-cover" />
               ) : (
-                <img src={exercise.thumbnail} className="w-full h-full object-cover opacity-50 blur-sm" alt={exercise.name} />
-              )}
-              {localVideoUrl && (
-                <div className="absolute top-2 right-2 bg-blue-600/80 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">Local HQ</div>
+                <img src={exercise.thumbnail} className="w-full h-full object-cover opacity-80" alt={exercise.name} />
               )}
             </div>
             <div className="mt-4">
