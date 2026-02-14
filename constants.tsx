@@ -19,9 +19,9 @@ export const MOCK_EXERCISES: Exercise[] = [
     id: '1', 
     name: 'Jumping Jacks', 
     category: 'Cardio', 
-    duration: 60, 
-    thumbnail: './assets/jacks_thumb.png',
-    videoUrl: './assets/jacks_video.mp4' 
+    duration: 620, 
+    thumbnail: './assets/push_ups.jpeg',
+    videoUrl: './assets/pushup.mp4' 
   },
   { 
     id: '2', 
