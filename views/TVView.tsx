@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Exercise, Workout, WorkoutModule } from '../types';
 import { MOCK_EXERCISES } from '../constants';
 import { assetStorage } from '../services/assetStorage';
+import { storage } from '../services/storage';
 
 export const TVView: React.FC = () => {
   const [syncData, setSyncData] = useState<{ 
@@ -95,7 +96,8 @@ export const TVView: React.FC = () => {
 
   const { workout, currentModuleIndex, isPaused } = syncData;
   const myModule = workout.modules.find(m => m.id === activeModuleId);
-  const exerciseBase = myModule ? MOCK_EXERCISES.find(ex => ex.id === myModule.exerciseId) : null;
+  const allAvailableExercises = [...MOCK_EXERCISES, ...storage.getCustomExercises()];
+  const exerciseBase = myModule ? allAvailableExercises.find(ex => ex.id === myModule.exerciseId) : null;
   
   if (!exerciseBase || !myModule) return (
     <div className="h-screen w-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white text-center p-12 overflow-hidden">
