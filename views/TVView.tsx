@@ -5,15 +5,19 @@ import { MOCK_EXERCISES } from '../constants';
 import { assetStorage } from '../services/assetStorage';
 import { storage } from '../services/storage';
 
+interface MediaMapEntry {
+  exercise: Exercise;
+  videoBlob: Blob | null;
+  thumbnailBlob: Blob | null;
+}
+
 export const TVView: React.FC = () => {
   const [syncData, setSyncData] = useState<{ 
     workout: Workout; 
     currentModuleIndex: number; 
     timeLeft: number; 
     isPaused: boolean;
-    exercise?: Exercise | null;
-    localVideoBlob?: Blob | null;
-    localThumbnailBlob?: Blob | null;
+    mediaMap?: Record<string, MediaMapEntry> | null;
   } | null>(null);
   
   const [peerId, setPeerId] = useState<string>('');
@@ -21,6 +25,8 @@ export const TVView: React.FC = () => {
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
   const [localVideoUrl, setLocalVideoUrl] = useState<string | null>(null);
   const [localThumbnailUrl, setLocalThumbnailUrl] = useState<string | null>(null);
+  const [globalMediaMap, setGlobalMediaMap] = useState<Record<string, MediaMapEntry>>({});
+  
   const peerRef = useRef<any>(null);
 
   useEffect(() => {
@@ -39,6 +45,7 @@ export const TVView: React.FC = () => {
           setLocalTimeLeft(0);
           setLocalVideoUrl(null);
           setLocalThumbnailUrl(null);
+          setGlobalMediaMap({});
         }
       });
     });
@@ -57,43 +64,55 @@ export const TVView: React.FC = () => {
 
   useEffect(() => {
     if (!syncData || !peerId) return;
-    const { workout, currentModuleIndex, timeLeft, localVideoBlob, localThumbnailBlob, exercise } = syncData;
-    const currentPhoneModule = workout.modules[currentModuleIndex];
+    const { workout, currentModuleIndex, timeLeft, mediaMap } = syncData;
+    
+    // Update our cached media map if host sent a new one
+    if (mediaMap) {
+      setGlobalMediaMap(prev => ({ ...prev, ...mediaMap }));
+    }
 
-    if (currentPhoneModule && currentPhoneModule.displayId === peerId) {
-      // Sync local timer if it drifts
+    // CRITICAL: Search the ENTIRE workout for any module assigned to this TV
+    // We prioritize the module at currentModuleIndex, but fallback to any assignment
+    const myModules = workout.modules.filter(m => m.displayId === peerId);
+    
+    // If we have multiple assignments, rotate them based on currentModuleIndex
+    const myModule = myModules.length > 0 
+      ? myModules[currentModuleIndex % myModules.length] 
+      : null;
+
+    if (myModule) {
+      // Sync local timer
       if (Math.abs(localTimeLeft - timeLeft) > 2) setLocalTimeLeft(timeLeft);
 
-      if (activeModuleId !== currentPhoneModule.id) {
-        setActiveModuleId(currentPhoneModule.id);
+      if (activeModuleId !== myModule.id) {
+        setActiveModuleId(myModule.id);
         setLocalTimeLeft(timeLeft);
         
-        // Handle Video: Use the provided Blob if available (custom exercises)
-        if (localVideoBlob instanceof Blob) {
-          if (localVideoUrl) URL.revokeObjectURL(localVideoUrl);
-          setLocalVideoUrl(URL.createObjectURL(localVideoBlob));
-        } else {
-          // Clear current local video if no blob sent and it's a new module
-          setLocalVideoUrl(null);
-          // Fallback to local IndexedDB check (for previously saved assets on this device)
-          assetStorage.getAsset(currentPhoneModule.exerciseId, 'video').then(url => {
-            if (url) setLocalVideoUrl(url);
-          });
-        }
+        // Retrieve assets from the global map we received from host
+        const entry = (mediaMap || globalMediaMap)[myModule.exerciseId];
+        
+        if (entry) {
+          // Handle Video
+          if (entry.videoBlob instanceof Blob) {
+            if (localVideoUrl) URL.revokeObjectURL(localVideoUrl);
+            setLocalVideoUrl(URL.createObjectURL(entry.videoBlob));
+          } else {
+            setLocalVideoUrl(null);
+          }
 
-        // Handle Thumbnail: Use the provided Blob if available (custom exercises)
-        if (localThumbnailBlob instanceof Blob) {
-          if (localThumbnailUrl) URL.revokeObjectURL(localThumbnailUrl);
-          setLocalThumbnailUrl(URL.createObjectURL(localThumbnailBlob));
-        } else {
-          setLocalThumbnailUrl(null);
-          assetStorage.getAsset(currentPhoneModule.exerciseId, 'thumbnail').then(url => {
-            if (url) setLocalThumbnailUrl(url);
-          });
+          // Handle Thumbnail
+          if (entry.thumbnailBlob instanceof Blob) {
+            if (localThumbnailUrl) URL.revokeObjectURL(localThumbnailUrl);
+            setLocalThumbnailUrl(URL.createObjectURL(entry.thumbnailBlob));
+          } else {
+            setLocalThumbnailUrl(null);
+          }
         }
       }
+    } else {
+      setActiveModuleId(null);
     }
-  }, [syncData?.currentModuleIndex, syncData?.workout.id, peerId, syncData?.timeLeft, syncData?.localVideoBlob, syncData?.localThumbnailBlob]);
+  }, [syncData?.currentModuleIndex, syncData?.workout.id, peerId, syncData?.timeLeft, syncData?.mediaMap]);
 
   const formatTimeDisplay = (totalSeconds: number) => {
     const m = Math.floor(totalSeconds / 60);
@@ -116,20 +135,23 @@ export const TVView: React.FC = () => {
     </div>
   );
 
-  const { workout, currentModuleIndex, isPaused, exercise: syncedExercise } = syncData;
-  const myModule = workout.modules.find(m => m.id === activeModuleId);
+  const { workout, currentModuleIndex, isPaused } = syncData;
+  const myModule = workout.modules.filter(m => m.displayId === peerId)[currentModuleIndex % workout.modules.filter(m => m.displayId === peerId).length || 0];
   
-  // Use synced metadata if available
-  const exercise = syncedExercise || (myModule ? [...MOCK_EXERCISES, ...storage.getCustomExercises()].find(ex => ex.id === myModule.exerciseId) : null);
+  const entry = myModule ? (syncData.mediaMap || globalMediaMap)[myModule.exerciseId] : null;
+  const exercise = entry?.exercise || (myModule ? [...MOCK_EXERCISES, ...storage.getCustomExercises()].find(ex => ex.id === myModule.exerciseId) : null);
   
-  if (!exercise || !myModule) return (
+  if (!myModule || !exercise) return (
     <div className="h-screen w-screen bg-[#1A1A1A] flex flex-col items-center justify-center text-white text-center p-12 overflow-hidden">
-       <h2 className="text-4xl font-black uppercase italic mb-4 opacity-20">No Assignment</h2>
-       <p className="text-[10px] font-black uppercase tracking-widest text-gray-600">Waiting for exercise metadata from host...</p>
+       <div className="w-24 h-24 mb-6 opacity-10">
+          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM5 10h2v2H5v-2zm12 0h2v2h-2v-2zm-6 0h2v2h-2v-2z"/></svg>
+       </div>
+       <h2 className="text-4xl font-black uppercase italic mb-2 tracking-tighter text-white/20">Waiting...</h2>
+       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600">No station assigned to ID: {peerId}</p>
     </div>
   );
 
-  const isCurrentlyInSync = workout.modules.findIndex(m => m.id === activeModuleId) === currentModuleIndex;
+  const isCurrentlyInSync = workout.modules.findIndex(m => m.id === myModule.id) === currentModuleIndex;
 
   return (
     <div className="h-screen w-screen bg-black flex flex-col text-white overflow-hidden select-none relative">
@@ -139,10 +161,7 @@ export const TVView: React.FC = () => {
              <video 
                key={`demo-${exercise.id}-${localVideoUrl ? 'sync' : 'remote'}`} 
                src={localVideoUrl || exercise.videoUrl} 
-               autoPlay 
-               loop 
-               muted 
-               className="w-full h-full object-contain" 
+               autoPlay loop muted className="w-full h-full object-contain" 
              />
            ) : (
              <img 
@@ -161,10 +180,10 @@ export const TVView: React.FC = () => {
           </div>
 
           <div className="relative inline-block flex-shrink">
-            <div className={`text-[4vw] lg:text-[4.5rem] leading-none font-black italic tabular-nums drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-300 ${isPaused && isCurrentlyInSync ? 'opacity-20 scale-90' : 'text-white'}`}>
+            <div className={`text-[4vw] lg:text-[4.5rem] leading-none font-black italic tabular-nums drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)] transition-all duration-300 ${isPaused ? 'opacity-20 scale-90' : 'text-white'}`}>
               {formatTimeDisplay(localTimeLeft)}
             </div>
-            {isPaused && isCurrentlyInSync && (
+            {isPaused && (
               <div className="absolute inset-0 flex items-center justify-center animate-in fade-in zoom-in duration-300">
                  <div className="px-4 py-1 bg-white/10 backdrop-blur-2xl text-white border border-white/20 text-sm font-black uppercase italic tracking-widest rounded-lg shadow-2xl">Paused</div>
               </div>
@@ -178,7 +197,7 @@ export const TVView: React.FC = () => {
         <div className="absolute inset-0 flex items-center justify-between px-10 pointer-events-none">
           <span className="text-xs font-black uppercase italic tracking-widest text-white/30 truncate max-w-[120px]">{workout.name}</span>
           <div className="flex flex-col items-center justify-center">
-            <span className="text-[6px] font-black uppercase tracking-[0.6em] text-white/60 mb-0.5">STATION PROGRESS</span>
+            <span className="text-[6px] font-black uppercase tracking-[0.6em] text-white/60 mb-0.5">SESSION PROGRESS</span>
             <span className="text-sm font-black italic text-[#E1523D] leading-none">{currentModuleIndex + 1} <span className="text-white/20 text-[10px] not-italic mx-0.5">/</span> {workout.modules.length}</span>
           </div>
           <span className="text-[7px] font-mono font-bold text-white/20 tracking-widest uppercase">ID: {peerId}</span>
