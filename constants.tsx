@@ -9,13 +9,60 @@ export const COLORS = {
   card: '#FFFFFF',
 };
 
+/**
+ * PATH GUIDANCE:
+ * Create an 'assets' folder in your project root.
+ * Place your images and videos there and name them accordingly.
+ */
 export const MOCK_EXERCISES: Exercise[] = [
-  { id: '1', name: 'Jumping Jacks', category: 'Cardio', duration: 60, thumbnail: 'https://picsum.photos/seed/jacks/400/225' },
-  { id: '2', name: 'Push Ups', category: 'Strength', duration: 45, thumbnail: 'https://picsum.photos/seed/push/400/225' },
-  { id: '3', name: 'Plank', category: 'Core', duration: 30, thumbnail: 'https://picsum.photos/seed/plank/400/225' },
-  { id: '4', name: 'Squats', category: 'Legs', duration: 60, thumbnail: 'https://picsum.photos/seed/squats/400/225' },
-  { id: '5', name: 'Burpees', category: 'HIIT', duration: 45, thumbnail: 'https://picsum.photos/seed/burpees/400/225' },
-  { id: '6', name: 'Bicep Curls', category: 'Strength', duration: 50, thumbnail: 'https://picsum.photos/seed/curls/400/225' },
+  { 
+    id: '1', 
+    name: 'Jumping Jacks', 
+    category: 'Cardio', 
+    duration: 60, 
+    thumbnail: './assets/jacks_thumb.png',
+    videoUrl: './assets/jacks_video.mp4' 
+  },
+  { 
+    id: '2', 
+    name: 'Push Ups', 
+    category: 'Strength', 
+    duration: 45, 
+    thumbnail: './assets/pushups_thumb.png',
+    videoUrl: './assets/pushups_video.mp4'
+  },
+  { 
+    id: '3', 
+    name: 'Plank', 
+    category: 'Core', 
+    duration: 30, 
+    thumbnail: './assets/plank_thumb.png',
+    videoUrl: './assets/plank_video.mp4'
+  },
+  { 
+    id: '4', 
+    name: 'Squats', 
+    category: 'Legs', 
+    duration: 60, 
+    thumbnail: './assets/squats_thumb.png',
+    videoUrl: './assets/squats_video.mp4'
+  },
+  { 
+    id: '5', 
+    name: 'Burpees', 
+    category: 'HIIT', 
+    duration: 45, 
+    thumbnail: './assets/burpees_thumb.png',
+    videoUrl: './assets/burpees_video.mp4'
+  },
+  { 
+    id: '6', 
+    name: 'Bicep Curls', 
+    category: 'Strength', 
+    duration: 50, 
+    thumbnail: './assets/curls_thumb.png',
+    videoUrl: './assets/curls_video.mp4'
+  },
 ];
 
 export const TEMPLATE_WORKOUTS: Workout[] = [
