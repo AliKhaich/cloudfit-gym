@@ -121,13 +121,10 @@ export const TVView: React.FC = () => {
            ) : (
              <img src={exercise.thumbnail} className="w-full h-full object-contain" alt={exercise.name} />
            )}
-           {/* Dimming overlay for inactive stations - text removed */}
-           {!isCurrentlyInSync && (
-             <div className="absolute inset-0 bg-blue-900/40 backdrop-blur-[2px] flex items-center justify-center transition-all duration-500" />
-           )}
+           {/* Permanently removed the blue/dimming overlay layer for inactive stations */}
         </div>
 
-        {/* BOTTOM OFFSET: Content Area - Cleaned up status labels */}
+        {/* BOTTOM OFFSET: Content Area */}
         <div className="flex flex-col items-center justify-center text-center w-full max-w-4xl mt-4 animate-in fade-in slide-in-from-bottom duration-1000 overflow-hidden">
           <div className="mb-1">
             <h2 className="text-[2.8vw] lg:text-3xl font-black uppercase italic tracking-tighter mb-0.5 leading-none drop-shadow-2xl truncate w-full px-4">{exercise.name}</h2>
