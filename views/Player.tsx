@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Workout, Exercise, LOCAL_DISPLAY_ID } from '../types';
-import { STATIC_EXERCISES } from '../constants';
+import { MOCK_EXERCISES } from '../constants';
 import { storage } from '../services/storage';
 
 interface PlayerProps {
@@ -15,7 +15,6 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   
-  // Use a ref for the absolute end time to prevent timer drift and ensure continuity
   const endTimeRef = useRef<number>(0);
   const currentModule = workout?.modules?.[currentModuleIndex];
   const isLocal = currentModule?.displayId === LOCAL_DISPLAY_ID;
@@ -25,7 +24,6 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
   const peerRef = useRef<any>(null);
   const connectionsRef = useRef<Map<string, any>>(new Map());
 
-  // Master Sync Function - Sends absolute target time
   const broadcastSync = () => {
     const payload = {
       type: 'HEARTBEAT',
@@ -45,7 +43,6 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
     });
   };
 
-  // Initialize PeerJS - Host Mode
   useEffect(() => {
     if (!workout?.modules) return;
     
@@ -89,10 +86,9 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
     };
   }, [workout.id]);
 
-  // Load Exercise & Update Absolute End Time
   useEffect(() => {
     if (currentModule) {
-      const allEx = [...STATIC_EXERCISES, ...storage.getCustomExercises()];
+      const allEx = [...MOCK_EXERCISES, ...storage.getCustomExercises()];
       const ex = allEx.find(e => e.id === currentModule.exerciseId);
       if (ex) {
         setExercise(ex);
@@ -105,13 +101,11 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
     }
   }, [currentModuleIndex]);
 
-  // Main Countdown Timer logic
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
 
     timerRef.current = window.setInterval(() => {
       if (isPaused) {
-        // If paused, slide the end time forward so it remains "duration" away
         endTimeRef.current += 1000;
         return;
       }
@@ -124,7 +118,6 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
         if (currentModuleIndex < workout.modules.length - 1) {
           setCurrentModuleIndex(prev => prev + 1);
         } else {
-          // Final exercise complete
           setIsPaused(true);
         }
       }
