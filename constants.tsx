@@ -68,12 +68,15 @@ const LEGS: Exercise[] = [
   },
 ];
 
-export const STATIC_EXERCISES: Exercise[] = [
+export const MOCK_EXERCISES: Exercise[] = [
   ...CARDIO,
   ...STRENGTH,
   ...CORE,
   ...LEGS,
 ];
+
+// Re-export for backward compatibility if needed, but the primary is MOCK_EXERCISES
+export const STATIC_EXERCISES = MOCK_EXERCISES;
 
 export const TEMPLATE_WORKOUTS: Workout[] = [
   {
