@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Workout } from '../types';
 import { MOCK_EXERCISES } from '../constants';
@@ -23,7 +22,6 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({ workout, onSelect, onD
 
   return (
     <div className="relative min-w-[280px] h-32 group">
-      {/* Main Clickable Area - Card Content */}
       <div 
         onClick={() => onSelect?.(workout)}
         className="absolute inset-0 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between hover:border-[#E1523D]/20 transition-all cursor-pointer active:scale-[0.98] z-10"
@@ -57,7 +55,6 @@ export const WorkoutCard: React.FC<WorkoutCardProps> = ({ workout, onSelect, onD
         </div>
       </div>
 
-      {/* Modern Minimalistic Delete Button - High Z-Index for Phone reliability */}
       {onDelete && (
         <button 
           onClick={(e) => {
