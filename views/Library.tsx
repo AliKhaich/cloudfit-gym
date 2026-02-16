@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { STATIC_EXERCISES } from '../constants';
+import { MOCK_EXERCISES } from '../constants';
 import { Exercise } from '../types';
 import { assetStorage } from '../services/assetStorage';
 import { storage } from '../services/storage';
@@ -33,7 +33,7 @@ export const Library: React.FC<LibraryProps> = ({ onSelectExercise, onGenerateVi
 
   const loadAllLocalAssets = async () => {
     const assets: Record<string, { thumb?: string; video?: string }> = {};
-    const allExercises = [...STATIC_EXERCISES, ...storage.getCustomExercises()];
+    const allExercises = [...MOCK_EXERCISES, ...storage.getCustomExercises()];
     for (const ex of allExercises) {
       const thumb = await assetStorage.getAsset(ex.id, 'thumbnail');
       const video = await assetStorage.getAsset(ex.id, 'video');
@@ -86,7 +86,7 @@ export const Library: React.FC<LibraryProps> = ({ onSelectExercise, onGenerateVi
 
   const defaultCategories = ['All', 'Cardio', 'Strength', 'Core', 'Legs', 'HIIT'];
   const allCategories = Array.from(new Set([...defaultCategories, ...customCategories]));
-  const allExercises = [...STATIC_EXERCISES, ...customExercises].map(ex => overrides[ex.id] || ex);
+  const allExercises = [...MOCK_EXERCISES, ...customExercises].map(ex => overrides[ex.id] || ex);
 
   const filtered = allExercises.filter(ex => {
     const matchesSearch = ex.name.toLowerCase().includes(search.toLowerCase());
