@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { STATIC_EXERCISES } from '../constants.tsx';
+import { STATIC_EXERCISES } from '../constants';
 import { Exercise } from '../types';
 import { assetStorage } from '../services/assetStorage';
 import { storage } from '../services/storage';
