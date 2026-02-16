@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Workout, WorkoutModule, Exercise, Display, LOCAL_DISPLAY_ID, Folder } from '../types';
 import { storage } from '../services/storage';
@@ -42,7 +41,6 @@ export const WorkoutEditor: React.FC<EditorProps> = ({ workout, onSave, onCancel
 
     setLastAddedId(newModule.id);
     setTimeout(() => setLastAddedId(null), 1000);
-    // Refresh available exercises in case a new one was just created in the library view
     setAllAvailableExercises([...MOCK_EXERCISES, ...storage.getCustomExercises()]);
   };
 
@@ -276,7 +274,6 @@ export const WorkoutEditor: React.FC<EditorProps> = ({ workout, onSave, onCancel
                 </div>
 
                 <div className="flex items-center gap-4">
-                  {/* Minute Control */}
                   <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1.5 rounded-2xl border border-gray-100">
                     <button 
                       onClick={() => updateModuleDuration(m.id, currentDuration - 60)}
@@ -296,7 +293,6 @@ export const WorkoutEditor: React.FC<EditorProps> = ({ workout, onSave, onCancel
                     </button>
                   </div>
 
-                  {/* Second Control */}
                   <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1.5 rounded-2xl border border-gray-100">
                     <button 
                       onClick={() => updateModuleDuration(m.id, currentDuration - 5)}
