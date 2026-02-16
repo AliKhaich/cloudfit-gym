@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Exercise, Workout } from '../types';
-import { STATIC_EXERCISES } from '../constants.tsx';
+import { STATIC_EXERCISES } from '../constants';
 import { storage } from '../services/storage';
 
 export const TVView: React.FC = () => {
