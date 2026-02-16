@@ -3,99 +3,91 @@ import React from 'react';
 import { Exercise, Workout } from './types';
 
 export const COLORS = {
-  primary: '#E1523D', // CloudFit Orange
+  primary: '#E1523D',
   dark: '#1A1A1A',
   bg: '#F5F5F5',
   card: '#FFFFFF',
 };
 
-/**
- * PATH GUIDANCE:
- * Create an 'assets' folder in your project root.
- * Place your images and videos there and name them accordingly.
- */
-export const MOCK_EXERCISES: Exercise[] = [
+const CARDIO: Exercise[] = [
   { 
-    id: '1', 
+    id: 'ex-jacks', 
     name: 'Jumping Jacks', 
     category: 'Cardio', 
-    duration: 600, 
-    thumbnail: './assets/push_ups.jpeg',
-    videoUrl: './assets/pushup.mp4' 
+    duration: 60, 
+    thumbnail: 'https://picsum.photos/seed/jacks/400/225',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' 
   },
   { 
-    id: '2', 
+    id: 'ex-burpees', 
+    name: 'Burpees', 
+    category: 'Cardio', 
+    duration: 45, 
+    thumbnail: 'https://picsum.photos/seed/burpees/400/225',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4'
+  },
+];
+
+const STRENGTH: Exercise[] = [
+  { 
+    id: 'ex-pushups', 
     name: 'Push Ups', 
     category: 'Strength', 
-    duration: 600, 
-    thumbnail: './assets/pushups_thumb.png',
-    videoUrl: './assets/pushups_video.mp4'
+    duration: 45, 
+    thumbnail: 'https://picsum.photos/seed/pushups/400/225',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4'
   },
   { 
-    id: '3', 
-    name: 'Plank', 
-    category: 'Core', 
-    duration: 600, 
-    thumbnail: './assets/plank_thumb.png',
-    videoUrl: './assets/plank_video.mp4'
-  },
-  { 
-    id: '4', 
-    name: 'Squats', 
-    category: 'Legs', 
-    duration: 600, 
-    thumbnail: './assets/squats_thumb.png',
-    videoUrl: './assets/squats_video.mp4'
-  },
-  { 
-    id: '5', 
-    name: 'Burpees', 
-    category: 'HIIT', 
-    duration: 600, 
-    thumbnail: './assets/burpees_thumb.png',
-    videoUrl: './assets/burpees_video.mp4'
-  },
-  { 
-    id: '6', 
+    id: 'ex-curls', 
     name: 'Bicep Curls', 
     category: 'Strength', 
-    duration: 600, 
-    thumbnail: './assets/curls_thumb.png',
-    videoUrl: './assets/curls_video.mp4'
+    duration: 50, 
+    thumbnail: 'https://picsum.photos/seed/curls/400/225',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4'
   },
+];
+
+const CORE: Exercise[] = [
+  { 
+    id: 'ex-plank', 
+    name: 'Plank', 
+    category: 'Core', 
+    duration: 30, 
+    thumbnail: 'https://picsum.photos/seed/plank/400/225',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4'
+  },
+];
+
+const LEGS: Exercise[] = [
+  { 
+    id: 'ex-squats', 
+    name: 'Squats', 
+    category: 'Legs', 
+    duration: 60, 
+    thumbnail: 'https://picsum.photos/seed/squats/400/225',
+    videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4'
+  },
+];
+
+export const STATIC_EXERCISES: Exercise[] = [
+  ...CARDIO,
+  ...STRENGTH,
+  ...CORE,
+  ...LEGS,
 ];
 
 export const TEMPLATE_WORKOUTS: Workout[] = [
   {
     id: 't1',
-    name: 'Morning Energy',
+    name: 'Full Body Station Circuit',
     modules: [
-      { id: 'm1', exerciseId: '1', displayId: 'local', duration: 600 },
-      { id: 'm2', exerciseId: '4', displayId: 'local', duration: 600 },
-      { id: 'm3', exerciseId: '5', displayId: 'local', duration: 600 }
+      { id: 'm1', exerciseId: 'ex-jacks', displayId: 'local', duration: 30 },
+      { id: 'm2', exerciseId: 'ex-pushups', displayId: 'STATION 1', duration: 30 },
+      { id: 'm3', exerciseId: 'ex-squats', displayId: 'STATION 2', duration: 30 },
+      { id: 'm4', exerciseId: 'ex-plank', displayId: 'STATION 3', duration: 30 }
     ],
     lastModified: Date.now(),
     scheduledDays: [1, 3, 5]
-  },
-  {
-    id: 't2',
-    name: 'Core Crusher',
-    modules: [
-      { id: 'm4', exerciseId: '3', displayId: 'local', duration: 600 },
-      { id: 'm5', exerciseId: '3', displayId: 'local', duration: 600 }
-    ],
-    lastModified: Date.now(),
-    scheduledDays: [2, 4]
-  },
-  {
-    id: 't3',
-    name: 'Quick Strength',
-    modules: [
-      { id: 'm6', exerciseId: '2', displayId: 'local', duration: 600 },
-      { id: 'm7', exerciseId: '6', displayId: 'local', duration: 600 }
-    ],
-    lastModified: Date.now(),
-    scheduledDays: [0, 6]
   }
 ];
 
