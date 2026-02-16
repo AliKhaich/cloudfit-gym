@@ -20,10 +20,31 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
   const isLocal = currentModule?.displayId === LOCAL_DISPLAY_ID;
 
   const timerRef = useRef<number | null>(null);
+  const heartbeatRef = useRef<number | null>(null);
   const peerRef = useRef<any>(null);
   const connectionsRef = useRef<Map<string, any>>(new Map());
 
-  // Initialize PeerJS - Host Mode
+  // Master Sync Function
+  const broadcastSync = () => {
+    const payload = {
+      type: 'HEARTBEAT',
+      payload: {
+        workout, // Always send full workout object for late-joiners/recovery
+        currentModuleIndex,
+        timeLeft,
+        isPaused,
+        timestamp: Date.now()
+      }
+    };
+    
+    connectionsRef.current.forEach(conn => {
+      if (conn && conn.open) {
+        conn.send(payload);
+      }
+    });
+  };
+
+  // 1. Initialize PeerJS - Host Mode
   useEffect(() => {
     if (!workout?.modules) return;
     
@@ -32,7 +53,6 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
     peerRef.current = peer;
     
     peer.on('open', () => {
-      // Find all unique remote display IDs used in this workout
       const remoteDisplayIds = Array.from(new Set(
         workout.modules
           .filter(m => m && m.displayId && m.displayId !== LOCAL_DISPLAY_ID)
@@ -45,21 +65,23 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
         
         conn.on('open', () => {
           connectionsRef.current.set(id, conn);
-          // Initial sync immediately
-          sendSync(conn);
+          // Initial immediate sync
+          conn.send({
+            type: 'HEARTBEAT',
+            payload: { workout, currentModuleIndex, timeLeft, isPaused, timestamp: Date.now() }
+          });
         });
 
-        conn.on('close', () => {
-          connectionsRef.current.delete(id);
-        });
-
-        conn.on('error', () => {
-          connectionsRef.current.delete(id);
-        });
+        conn.on('close', () => connectionsRef.current.delete(id));
+        conn.on('error', () => connectionsRef.current.delete(id));
       });
     });
 
+    // High-frequency heartbeat (500ms) to ensure smooth timer on remotes
+    heartbeatRef.current = window.setInterval(broadcastSync, 500);
+
     return () => {
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       connectionsRef.current.forEach(conn => {
         if (conn && conn.open) conn.send({ type: 'END_SESSION' });
         conn.close();
@@ -68,27 +90,7 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
     };
   }, [workout.id]);
 
-  const sendSync = (conn: any) => {
-    if (!conn || !conn.open) return;
-    // CRITICAL FIX: Always send the workout object. 
-    // This ensures TVs that join late or drop a packet stay synced.
-    conn.send({
-      type: 'HEARTBEAT',
-      payload: {
-        workout: workout, 
-        currentModuleIndex,
-        timeLeft,
-        isPaused
-      }
-    });
-  };
-
-  // Broadcast updates to ALL connected TVs every time timer or state changes
-  useEffect(() => {
-    connectionsRef.current.forEach(conn => sendSync(conn));
-  }, [timeLeft, isPaused, currentModuleIndex]);
-
-  // Load Host-side exercise
+  // 2. Load Exercise & Reset Timer on Module Change
   useEffect(() => {
     if (currentModule) {
       const allEx = [...STATIC_EXERCISES, ...storage.getCustomExercises()];
@@ -98,28 +100,30 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
         setTimeLeft(currentModule.duration ?? ex.duration ?? 0);
       }
       setIsInitialLoading(false);
+      // Immediate broadcast when exercise switches
+      setTimeout(broadcastSync, 50);
     }
-  }, [currentModuleIndex, currentModule]);
+  }, [currentModuleIndex]);
 
-  // Global Timer logic
+  // 3. Main Countdown Timer
   useEffect(() => {
     if (!isPaused && timeLeft > 0) {
       timerRef.current = window.setInterval(() => {
-        setTimeLeft(prev => prev - 1);
-      }, 1000);
-    } else if (timeLeft === 0 && !isInitialLoading) {
-      if (workout?.modules && currentModuleIndex < workout.modules.length - 1) {
-        setCurrentModuleIndex(prev => prev + 1);
-      } else {
-        // Workout finished
-        setExercise(null);
-        connectionsRef.current.forEach(conn => {
-          if (conn.open) conn.send({ type: 'END_SESSION' });
+        setTimeLeft(prev => {
+          const next = prev - 1;
+          if (next <= 0) {
+            // Logic to advance module
+            if (currentModuleIndex < workout.modules.length - 1) {
+              setCurrentModuleIndex(idx => idx + 1);
+              return 0; // Will be reset by the Module Change effect
+            }
+          }
+          return Math.max(0, next);
         });
-      }
+      }, 1000);
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [timeLeft, isPaused, currentModuleIndex, workout?.modules?.length, isInitialLoading]);
+  }, [isPaused, currentModuleIndex, workout.modules.length]);
 
   const formatTimeDisplay = (totalSeconds: number) => {
     const m = Math.floor(totalSeconds / 60);
@@ -128,15 +132,24 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  const handleManualSkip = (direction: 'next' | 'prev') => {
+    if (direction === 'next' && currentModuleIndex < workout.modules.length - 1) {
+      setCurrentModuleIndex(prev => prev + 1);
+    } else if (direction === 'prev' && currentModuleIndex > 0) {
+      setCurrentModuleIndex(prev => prev - 1);
+    }
+  };
+
   if (isInitialLoading) return (
     <div className="fixed inset-0 bg-[#1A1A1A] flex flex-col items-center justify-center text-white">
-      <div className="w-10 h-10 border-4 border-[#E1523D] border-t-transparent rounded-full animate-spin mb-4" />
-      <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Launching Session...</p>
+      <div className="w-12 h-12 border-4 border-[#E1523D] border-t-transparent rounded-full animate-spin mb-4" />
+      <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Starting Session...</p>
     </div>
   );
 
   return (
-    <div className="fixed inset-0 bg-[#1A1A1A] flex flex-col text-white overflow-hidden select-none z-[100]">
+    <div className="fixed inset-0 bg-[#1A1A1A] flex flex-col text-white overflow-hidden select-none z-[100] animate-in fade-in duration-300">
+      {/* Header */}
       <div className="h-20 shrink-0 px-6 flex items-center border-b border-white/5 bg-black/40 backdrop-blur-md">
         <button onClick={onClose} className="w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all active:scale-90">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -147,7 +160,6 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
         </div>
         <div className="flex items-center gap-2">
            <div className="flex -space-x-1.5">
-             {/* Fix: Explicitly type 'id' as string to avoid 'unknown' error on substring() */}
              {Array.from(connectionsRef.current.keys()).map((id: string) => (
                <div key={id} className="w-6 h-6 rounded-full bg-[#E1523D] border-2 border-[#1A1A1A] flex items-center justify-center text-[8px] font-black shadow-sm" title={`TV: ${id}`}>
                  {id.substring(0, 1)}
@@ -157,42 +169,45 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
         </div>
       </div>
 
+      {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-4 text-center">
         {isLocal && exercise ? (
-          <div className="w-full flex flex-col items-center justify-center flex-1">
+          <div className="w-full flex flex-col items-center justify-center flex-1 animate-in zoom-in duration-500">
             <div className="relative w-full max-w-sm aspect-video rounded-[32px] overflow-hidden shadow-2xl bg-black border border-white/10 max-h-[35vh]">
-              <video src={exercise.videoUrl} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+              <video key={exercise.id} src={exercise.videoUrl} autoPlay loop muted playsInline className="w-full h-full object-cover" />
             </div>
             <div className="mt-6">
               <h2 className="text-3xl font-black uppercase italic tracking-tighter leading-tight">{exercise.name}</h2>
-              <span className="text-[#E1523D] font-black uppercase tracking-[0.2em] text-[11px] mt-1 block">Local Station</span>
+              <span className="text-[#E1523D] font-black uppercase tracking-[0.2em] text-[11px] mt-1 block">Local Station Active</span>
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center gap-6">
-            <div className="w-24 h-18 border-4 border-[#E1523D] rounded-[24px] flex items-center justify-center bg-[#E1523D]/10 animate-pulse">
-                <svg className="w-10 h-10 text-[#E1523D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex-1 flex flex-col items-center justify-center gap-6 opacity-40">
+            <div className="w-24 h-18 border-4 border-white/20 rounded-[24px] flex items-center justify-center bg-white/5">
+                <svg className="w-10 h-10 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
             </div>
             <div className="text-center">
-              <h2 className="text-xl font-black uppercase italic tracking-widest text-white/90">
-                {isLocal ? "Rest Period" : "Remote Display Active"}
+              <h2 className="text-xl font-black uppercase italic tracking-widest">
+                {isLocal ? "Rest Period" : "Broadcasting to TVs"}
               </h2>
               <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-2">Currently casting to {connectionsRef.current.size} displays</p>
             </div>
           </div>
         )}
 
+        {/* Timer */}
         <div className="shrink-0 flex flex-col items-center justify-center py-4">
-          <div className={`${timeLeft >= 60 ? 'text-[8rem] md:text-[10rem]' : 'text-[12rem] md:text-[15rem]'} font-black italic tabular-nums text-white leading-none tracking-tighter drop-shadow-2xl`}>
+          <div className={`${timeLeft >= 60 ? 'text-[8rem]' : 'text-[12rem]'} font-black italic tabular-nums text-white leading-none tracking-tighter drop-shadow-2xl transition-all`}>
             {formatTimeDisplay(timeLeft)}
           </div>
         </div>
       </div>
 
+      {/* Controls */}
       <div className="h-32 flex justify-center items-center gap-10 bg-black/60 backdrop-blur-2xl border-t border-white/5 pb-safe">
-        <button disabled={currentModuleIndex === 0} onClick={() => setCurrentModuleIndex(prev => prev - 1)} className="w-16 h-16 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center disabled:opacity-5 transition-all active:scale-90">
+        <button disabled={currentModuleIndex === 0} onClick={() => handleManualSkip('prev')} className="w-16 h-16 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center disabled:opacity-5 transition-all active:scale-90">
           <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z" /></svg>
         </button>
         <button onClick={() => setIsPaused(!isPaused)} className="w-24 h-24 bg-[#E1523D] rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(225,82,61,0.4)] active:scale-95 transition-all">
@@ -202,7 +217,7 @@ export const Player: React.FC<PlayerProps> = ({ workout, onClose }) => {
             <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4h3v12H5V4zm7 0h3v12h-3V4z" /></svg>
           )}
         </button>
-        <button disabled={currentModuleIndex === workout.modules.length - 1} onClick={() => setCurrentModuleIndex(prev => prev + 1)} className="w-16 h-16 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center disabled:opacity-5 transition-all active:scale-90">
+        <button disabled={currentModuleIndex === workout.modules.length - 1} onClick={() => handleManualSkip('next')} className="w-16 h-16 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center disabled:opacity-5 transition-all active:scale-90">
           <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798L4.555 5.168z" /></svg>
         </button>
       </div>
