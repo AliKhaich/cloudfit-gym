@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Workout, WorkoutModule, Exercise, Display, LOCAL_DISPLAY_ID } from '../types';
 import { storage } from '../services/storage';
@@ -102,7 +101,6 @@ export const Prepare: React.FC<PrepareProps> = ({ workout, onStart, onEdit, onCl
                   </div>
                   
                   <div className="flex flex-col gap-2">
-                    {/* Minute Adjustment */}
                     <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-2xl border border-white/5">
                       <button onClick={() => updateModuleDuration(m.id, currentDuration - 60)} className="text-gray-400 hover:text-white">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" /></svg>
@@ -116,7 +114,6 @@ export const Prepare: React.FC<PrepareProps> = ({ workout, onStart, onEdit, onCl
                       </button>
                     </div>
 
-                    {/* Second Adjustment */}
                     <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-2xl border border-white/5">
                       <button onClick={() => updateModuleDuration(m.id, currentDuration - 5)} className="text-gray-400 hover:text-white">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" /></svg>
