@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Workout, Exercise, LOCAL_DISPLAY_ID } from '../types';
-import { STATIC_EXERCISES } from '../constants.tsx';
+import { STATIC_EXERCISES } from '../constants';
 import { storage } from '../services/storage';
 
 interface PlayerProps {
