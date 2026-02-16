@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Exercise, Workout } from '../types';
-import { STATIC_EXERCISES } from '../constants';
+import { MOCK_EXERCISES } from '../constants';
 import { storage } from '../services/storage';
 
 export const TVView: React.FC = () => {
@@ -15,7 +15,6 @@ export const TVView: React.FC = () => {
   const endTimeRef = useRef<number>(0);
   const peerRef = useRef<any>(null);
 
-  // Initialize TV Peer
   useEffect(() => {
     const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     // @ts-ignore
@@ -33,7 +32,6 @@ export const TVView: React.FC = () => {
           setIsPaused(hostPaused);
           endTimeRef.current = hostEndTime;
           
-          // Force immediate update of remaining time based on current system clock
           const remaining = Math.max(0, Math.ceil((hostEndTime - Date.now()) / 1000));
           setLocalTimeLeft(remaining);
         } else if (data.type === 'END_SESSION') {
@@ -46,7 +44,6 @@ export const TVView: React.FC = () => {
     return () => peer.destroy();
   }, []);
 
-  // Local Timer Loop for smooth UI updates
   useEffect(() => {
     const interval = window.setInterval(() => {
       if (!globalWorkout || isPaused) return;
@@ -75,7 +72,7 @@ export const TVView: React.FC = () => {
   const activeModule = isMyTurn ? currentModule : myNextModule;
 
   const exercise = activeModule 
-    ? [...STATIC_EXERCISES, ...storage.getCustomExercises()].find(ex => ex.id === activeModule.exerciseId) 
+    ? [...MOCK_EXERCISES, ...storage.getCustomExercises()].find(ex => ex.id === activeModule.exerciseId) 
     : null;
 
   const saveAlias = (val: string) => {
